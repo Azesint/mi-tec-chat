@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TecChat - Acceso</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #d1d7db;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .login-card {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        h1 { color: #00a884; margin-bottom: 20px; }
+        input {
+            width: 90%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #00a884;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        button:hover { background-color: #008f6f; }
+        
+        .footer { margin-top: 20px; font-size: 14px; color: #666; }
+        .toggle-link { color: #00a884; cursor: pointer; font-weight: bold; text-decoration: none;}
+        .toggle-link:hover { text-decoration: underline; }
+
+        #error-msg {
+            color: red;
+            font-size: 14px;
+            display: none;
+            margin-bottom: 10px;
+            background-color: #ffe6e6;
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <h1 id="titulo">Iniciar Sesión 🔒</h1>
+        
+        <div id="error-msg"></div>
+
+        <input type="text" id="username" placeholder="Nombre de usuario">
+        <input type="password" id="password" placeholder="Contraseña">
+        
+        <button id="btn-accion" onclick="procesarAuth()">ENTRAR</button>
+
+        <p class="footer">
+            <span id="texto-footer">¿No tienes cuenta?</span> 
+            <a class="toggle-link" onclick="alternarModo()" id="link-footer">Regístrate aquí</a>
+        </p>
+    </div>
+
+   <script>
+        // Variable para saber si estamos en modo Login o Registro
+        let esModoLogin = true; 
+
+        function alternarModo() {
+            esModoLogin = !esModoLogin; // Invertir valor
+            const titulo = document.getElementById("titulo");
+            const btn = document.getElementById("btn-accion");
+            const txtFooter = document.getElementById("texto-footer");
+            const linkFooter = document.getElementById("link-footer");
+            const errorDiv = document.getElementById("error-msg");
+
+            // Limpiar errores al cambiar
+            errorDiv.style.display = "none";
+            document.getElementById("username").value = "";
+            document.getElementById("password").value = "";
+
+            if (esModoLogin) {
+                // Configurar visualmente para LOGIN
+                titulo.innerText = "Iniciar Sesión 🔒";
+                titulo.style.color = "#00a884"; // Verde
+                btn.innerText = "ENTRAR";
+                btn.style.backgroundColor = "#00a884";
+                txtFooter.innerText = "¿No tienes cuenta?";
+                linkFooter.innerText = "Regístrate aquí";
+            } else {
+                // Configurar visualmente para REGISTRO
+                titulo.innerText = "Crear Cuenta ✨";
+                titulo.style.color = "#007bff"; // Azul para diferenciar
+                btn.innerText = "REGISTRARSE";
+                btn.style.backgroundColor = "#007bff"; 
+                txtFooter.innerText = "¿Ya tienes cuenta?";
+                linkFooter.innerText = "Inicia sesión";
+            }
+        }
+
+        async function procesarAuth() {
+            const user = document.getElementById("username").value;
+            const pass = document.getElementById("password").value;
+            const errorDiv = document.getElementById("error-msg");
+
+            if (!user || !pass) {
+                mostrarError("Usuario y contraseña son obligatorios");
+                return;
+            }
+
+            // DECIDIR A QUÉ RUTA LLAMAR (/login o /signup)
+            const ruta = esModoLogin ? "/login" : "/signup";
+
+            try {
+                const respuesta = await fetch(ruta, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username: user, password: pass }) 
+                });
+
+                const datos = await respuesta.json();
+
+                if (respuesta.ok) {
+                    // Si es registro exitoso, auto-logueamos o mandamos mensaje
+                    if (!esModoLogin) {
+                        alert("¡Cuenta creada! Ahora entrarás al chat.");
+                    }
+                    window.location.href = "/static/chat.html?username=" + encodeURIComponent(user);
+                } else {
+                    mostrarError(datos.detail || "Error desconocido");
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                mostrarError("Error de conexión con el servidor");
+            }
+        }
+
+        function mostrarError(mensaje) {
+            const errorDiv = document.getElementById("error-msg");
+            errorDiv.innerText = mensaje;
+            errorDiv.style.display = "block";
+        }
+
+        // Enter para enviar
+        document.getElementById("password").addEventListener("keypress", function(e) {
+            if (e.key === "Enter") procesarAuth();
+        });
+    </script>
+</body>
+</html>
