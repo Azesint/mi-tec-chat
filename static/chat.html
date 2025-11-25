@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TecChat - Avanzado</title>
+    <title>TecChat - Seguro</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
@@ -16,9 +16,9 @@
         .search-box { padding: 10px; border-bottom: 1px solid #eee; }
         .search-input { width: 90%; padding: 8px; border-radius: 20px; border: 2px solid #eee; outline: none; }
         .search-input:focus { border-color: #ffd700; } 
-        .contact-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; } /* Flex para poder reordenar */
+        .contact-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
         
-        .contact { display: flex; align-items: center; padding: 15px; cursor: pointer; border-bottom: 1px solid #f0f0f0; order: 1; /* Orden por defecto */ }
+        .contact { display: flex; align-items: center; padding: 15px; cursor: pointer; border-bottom: 1px solid #f0f0f0; order: 1; }
         .contact:hover { background-color: #fff9c4; } 
         .contact.active-chat { background-color: #ffe082; } 
         
@@ -40,17 +40,9 @@
         .status-dot { height: 10px; width: 10px; background-color: #ccc; border-radius: 50%; display: inline-block; margin-left: 8px; box-shadow: 0 0 2px rgba(0,0,0,0.2); transition: background-color 0.3s; }
         .is-online { background-color: #25d366; box-shadow: 0 0 5px #25d366; }
 
-        /* --- NUEVO: CONTADOR DE MENSAJES --- */
         .unread-badge {
-            background-color: #ff3b30; /* Rojo iPhone */
-            color: white;
-            font-size: 11px;
-            font-weight: bold;
-            padding: 2px 6px;
-            border-radius: 10px;
-            margin-left: auto; /* Empujar a la derecha */
-            display: none; /* Oculto si es 0 */
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            background-color: #ff3b30; color: white; font-size: 11px; font-weight: bold;
+            padding: 2px 6px; border-radius: 10px; margin-left: auto; display: none; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
 
         .chat-area { flex: 1; display: flex; flex-direction: column; background: #e5e5e5; background-image: radial-gradient(#ccc 1px, transparent 1px); background-size: 20px 20px; }
@@ -88,7 +80,7 @@
             .user-avatar { margin-right: 0; }
             .contact { justify-content: center; padding: 15px 0; }
             .sidebar-header { justify-content: center; }
-            .unread-badge { position: absolute; top: 5px; right: 5px; } /* En móvil flotamos el badge */
+            .unread-badge { position: absolute; top: 5px; right: 5px; }
         }
     </style>
 </head>
@@ -137,14 +129,19 @@
     </div>
 
     <script>
-        const params = new URLSearchParams(window.location.search);
-        const username = params.get('username');
-        if (!username) window.location.href = "/";
+        // --- SEGURIDAD: LEER USUARIO DEL LOCALSTORAGE ---
+        const username = localStorage.getItem("tecchat_usuario");
+
+        // Si no hay usuario guardado, lo mandamos al login para que se identifique
+        if (!username) {
+            window.location.href = "/";
+        }
+        
         document.getElementById("mi-nombre-display").innerText = username;
 
         let chatActual = "Chat General"; 
         let todosLosMensajes = []; 
-        let contadoresNoLeidos = {}; // Aquí guardamos cuántos mensajes hay sin leer por usuario
+        let contadoresNoLeidos = {}; 
 
         function filtrarContactos() {
             const input = document.getElementById('input-busqueda');
@@ -191,36 +188,22 @@
                 eliminarMensajeDePantalla(data.id);
             }
             else if (data.type === "CHAT") {
-                // CHAT NORMAL
                 todosLosMensajes.push(data);
                 renderizarMensaje(data);
-                
-                // --- LÓGICA DE NOTIFICACIÓN Y REORDENAMIENTO ---
                 manejarNotificacion(data);
             }
         };
 
-        // --- FUNCIÓN CLAVE: MOVER CONTACTO ARRIBA Y CONTAR ---
         function manejarNotificacion(data) {
-            // Si el mensaje lo envié yo, no cuento nada, pero muevo al destinatario arriba
             if (data.sender === username) {
                 moverContactoArriba(data.recipient);
                 return;
             }
-
-            // Si es un mensaje del sistema, ignoramos
             if (data.sender === "Sistema") return;
 
-            // Determinar quién me escribió (para moverlo y ponerle badge)
-            // Si es Chat General, movemos la pestaña de General
-            // Si es Privado, el sender es quien me escribió
             let remitente = (data.recipient === "Chat General") ? "Chat General" : data.sender;
-
-            // 1. MOVER ARRIBA (PREPEND)
             moverContactoArriba(remitente);
 
-            // 2. CONTADOR ROJO
-            // Solo aumentamos si NO tengo abierto ese chat en este momento
             if (remitente !== chatActual) {
                 if (!contadoresNoLeidos[remitente]) contadoresNoLeidos[remitente] = 0;
                 contadoresNoLeidos[remitente]++;
@@ -231,18 +214,12 @@
         function moverContactoArriba(nombreContacto) {
             const lista = document.getElementById("lista-contactos");
             let divContacto;
-
             if (nombreContacto === "Chat General") {
                 divContacto = document.getElementById("contact-general");
             } else {
-                // Buscamos el div que tenga data-name = nombreContacto
                 divContacto = document.querySelector(`.contact-user[data-name="${nombreContacto}"]`);
             }
-
-            // Si existe el elemento, lo mandamos al principio de la lista
-            if (divContacto) {
-                lista.prepend(divContacto);
-            }
+            if (divContacto) lista.prepend(divContacto);
         }
 
         function actualizarBadge(nombreContacto, cantidad) {
@@ -252,28 +229,23 @@
             } else {
                 divContacto = document.querySelector(`.contact-user[data-name="${nombreContacto}"]`);
             }
-
             if (divContacto) {
                 const badge = divContacto.querySelector(".unread-badge");
                 if (badge) {
                     badge.innerText = cantidad;
-                    badge.style.display = "inline-block"; // Mostrarlo
+                    badge.style.display = "inline-block"; 
                 }
             }
         }
 
         function limpiarBadge(nombreContacto) {
-            // Resetear contador interno
             contadoresNoLeidos[nombreContacto] = 0;
-            
-            // Ocultar badge visual
             let divContacto;
             if (nombreContacto === "Chat General") {
                 divContacto = document.getElementById("contact-general");
             } else {
                 divContacto = document.querySelector(`.contact-user[data-name="${nombreContacto}"]`);
             }
-
             if (divContacto) {
                 const badge = divContacto.querySelector(".unread-badge");
                 if (badge) badge.style.display = "none";
@@ -312,8 +284,6 @@
 
         function cambiarChat(nuevoDestinatario, avatarUrl) {
             chatActual = nuevoDestinatario;
-            
-            // --- NUEVO: AL ABRIR CHAT, LIMPIAMOS NOTIFICACIONES ---
             limpiarBadge(chatActual);
 
             document.getElementById("titulo-chat").innerText = chatActual;
@@ -407,15 +377,14 @@
             const users = await resU.json();
             const container = document.getElementById("lista-contactos");
             
-            // 1. PRIMERO AGREGAMOS EL CHAT GENERAL
-            // Agregamos el <span class="unread-badge"></span> vacio
             container.innerHTML = `
                 <div class="contact active-chat" id="contact-general" onclick="cambiarChat('Chat General', '')"> 
                     <div class="user-avatar active-avatar"><i class="fas fa-users" style="color:#555;"></i></div>
                     <div class="contact-info">
                         <div class="contact-name" style="font-weight:bold;">
                             Chat General
-                            <span class="unread-badge"></span> </div>
+                            <span class="unread-badge"></span>
+                        </div>
                         <div class="contact-last-msg" style="color:#666; font-size:12px;">Sala pública</div>
                     </div>
                 </div>
@@ -432,8 +401,6 @@
             users.forEach(u => {
                 if (u.username !== username) {
                     const avatarUrl = u.avatar ? u.avatar : generarUrlAvatar(u.username);
-                    
-                    // 2. AGREGAMOS A LOS USUARIOS CON EL SPAN BADGE
                     container.innerHTML += `
                     <div class="contact contact-user" data-name="${u.username}" onclick="cambiarChat('${u.username}', '${avatarUrl}')">
                         <div class="user-avatar"><img src="${avatarUrl}" alt="${u.username}"></div>
@@ -441,7 +408,8 @@
                             <div class="contact-name" style="font-weight:600;">
                                 ${u.username} 
                                 <span class="status-dot"></span>
-                                <span class="unread-badge"></span> </div>
+                                <span class="unread-badge"></span>
+                            </div>
                             <div class="contact-last-msg estado-texto" style="color:#aaa; font-size:11px;">Desconectado</div>
                         </div>
                     </div>`;

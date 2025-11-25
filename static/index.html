@@ -118,8 +118,7 @@
         async function procesarAuth() {
             const user = document.getElementById("username").value;
             const pass = document.getElementById("password").value;
-            const errorDiv = document.getElementById("error-msg");
-
+            
             if (!user || !pass) {
                 mostrarError("Usuario y contraseña son obligatorios");
                 return;
@@ -138,11 +137,17 @@
                 const datos = await respuesta.json();
 
                 if (respuesta.ok) {
-                    // Si es registro exitoso, auto-logueamos o mandamos mensaje
                     if (!esModoLogin) {
                         alert("¡Cuenta creada! Ahora entrarás al chat.");
                     }
-                    window.location.href = "/static/chat.html?username=" + encodeURIComponent(user);
+                    
+                    // --- AQUÍ ESTÁ EL CAMBIO DE SEGURIDAD ---
+                    // Guardamos en memoria oculta en lugar de en la URL
+                    localStorage.setItem("tecchat_usuario", user);
+                    
+                    // Redirigimos sin mostrar el nombre en el link
+                    window.location.href = "/static/chat.html";
+
                 } else {
                     mostrarError(datos.detail || "Error desconocido");
                 }
