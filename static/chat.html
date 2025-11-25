@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TecChat - Borrar</title>
+    <title>TecChat - Avanzado</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
@@ -16,9 +16,9 @@
         .search-box { padding: 10px; border-bottom: 1px solid #eee; }
         .search-input { width: 90%; padding: 8px; border-radius: 20px; border: 2px solid #eee; outline: none; }
         .search-input:focus { border-color: #ffd700; } 
-        .contact-list { flex: 1; overflow-y: auto; }
+        .contact-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; } /* Flex para poder reordenar */
         
-        .contact { display: flex; align-items: center; padding: 15px; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
+        .contact { display: flex; align-items: center; padding: 15px; cursor: pointer; border-bottom: 1px solid #f0f0f0; order: 1; /* Orden por defecto */ }
         .contact:hover { background-color: #fff9c4; } 
         .contact.active-chat { background-color: #ffe082; } 
         
@@ -40,6 +40,19 @@
         .status-dot { height: 10px; width: 10px; background-color: #ccc; border-radius: 50%; display: inline-block; margin-left: 8px; box-shadow: 0 0 2px rgba(0,0,0,0.2); transition: background-color 0.3s; }
         .is-online { background-color: #25d366; box-shadow: 0 0 5px #25d366; }
 
+        /* --- NUEVO: CONTADOR DE MENSAJES --- */
+        .unread-badge {
+            background-color: #ff3b30; /* Rojo iPhone */
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: auto; /* Empujar a la derecha */
+            display: none; /* Oculto si es 0 */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
         .chat-area { flex: 1; display: flex; flex-direction: column; background: #e5e5e5; background-image: radial-gradient(#ccc 1px, transparent 1px); background-size: 20px 20px; }
         .chat-header { padding: 0 20px; height: 60px; background: #fff; border-bottom: 1px solid #ddd; display: flex; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); z-index: 10; }
         .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
@@ -53,24 +66,11 @@
         .msg-image:hover { transform: scale(1.02); }
         .msg-time { display: block; font-size: 11px; margin-top: 4px; text-align: right; opacity: 0.7; }
 
-        /* --- BOTÓN DE BORRAR (BASURA) --- */
         .delete-btn {
-            display: none; /* Oculto por defecto, aparece al pasar el mouse */
-            position: absolute;
-            top: -10px;
-            right: -10px;
-            background: #ff4444;
-            color: white;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: none; position: absolute; top: -10px; right: -10px;
+            background: #ff4444; color: white; border-radius: 50%; width: 20px; height: 20px;
+            align-items: center; justify-content: center; font-size: 10px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
-        /* Solo mostrar botón basura en mis mensajes (sent) al pasar el mouse */
         .message.sent:hover .delete-btn { display: flex; }
 
         .chat-input-area { padding: 15px; background: #fff; display: flex; gap: 10px; align-items: center; }
@@ -88,6 +88,7 @@
             .user-avatar { margin-right: 0; }
             .contact { justify-content: center; padding: 15px 0; }
             .sidebar-header { justify-content: center; }
+            .unread-badge { position: absolute; top: 5px; right: 5px; } /* En móvil flotamos el badge */
         }
     </style>
 </head>
@@ -141,6 +142,10 @@
         if (!username) window.location.href = "/";
         document.getElementById("mi-nombre-display").innerText = username;
 
+        let chatActual = "Chat General"; 
+        let todosLosMensajes = []; 
+        let contadoresNoLeidos = {}; // Aquí guardamos cuántos mensajes hay sin leer por usuario
+
         function filtrarContactos() {
             const input = document.getElementById('input-busqueda');
             const filtro = input.value.toUpperCase();
@@ -173,49 +178,117 @@
             } catch(e) { console.error("Error guardando avatar", e); }
         }
 
-        let chatActual = "Chat General"; 
-        let todosLosMensajes = []; 
-
         const protocol = window.location.protocol === "https:" ? "wss" : "ws";
         const socket = new WebSocket(`${protocol}://${window.location.host}/ws/${username}`);
 
         socket.onmessage = function(event) {
             const data = JSON.parse(event.data);
             
-            // --- MANEJO DE TIPOS DE MENSAJE ---
             if (data.type === "STATUS") {
                 actualizarEstadoUsuarios(data.online_users);
             } 
             else if (data.type === "DELETE") {
-                // ALGUIEN BORRÓ UN MENSAJE
                 eliminarMensajeDePantalla(data.id);
             }
-            else {
+            else if (data.type === "CHAT") {
                 // CHAT NORMAL
                 todosLosMensajes.push(data);
                 renderizarMensaje(data);
+                
+                // --- LÓGICA DE NOTIFICACIÓN Y REORDENAMIENTO ---
+                manejarNotificacion(data);
             }
         };
 
-        // --- FUNCIÓN PARA ELIMINAR VISUALMENTE ---
-        function eliminarMensajeDePantalla(id) {
-            // 1. Borrar de la memoria
-            todosLosMensajes = todosLosMensajes.filter(m => m.id !== id);
-            
-            // 2. Borrar del HTML si existe
-            const elemento = document.getElementById("msg-" + id);
-            if (elemento) {
-                elemento.remove();
+        // --- FUNCIÓN CLAVE: MOVER CONTACTO ARRIBA Y CONTAR ---
+        function manejarNotificacion(data) {
+            // Si el mensaje lo envié yo, no cuento nada, pero muevo al destinatario arriba
+            if (data.sender === username) {
+                moverContactoArriba(data.recipient);
+                return;
+            }
+
+            // Si es un mensaje del sistema, ignoramos
+            if (data.sender === "Sistema") return;
+
+            // Determinar quién me escribió (para moverlo y ponerle badge)
+            // Si es Chat General, movemos la pestaña de General
+            // Si es Privado, el sender es quien me escribió
+            let remitente = (data.recipient === "Chat General") ? "Chat General" : data.sender;
+
+            // 1. MOVER ARRIBA (PREPEND)
+            moverContactoArriba(remitente);
+
+            // 2. CONTADOR ROJO
+            // Solo aumentamos si NO tengo abierto ese chat en este momento
+            if (remitente !== chatActual) {
+                if (!contadoresNoLeidos[remitente]) contadoresNoLeidos[remitente] = 0;
+                contadoresNoLeidos[remitente]++;
+                actualizarBadge(remitente, contadoresNoLeidos[remitente]);
             }
         }
 
-        // --- FUNCIÓN PARA PEDIR BORRADO AL SERVIDOR ---
+        function moverContactoArriba(nombreContacto) {
+            const lista = document.getElementById("lista-contactos");
+            let divContacto;
+
+            if (nombreContacto === "Chat General") {
+                divContacto = document.getElementById("contact-general");
+            } else {
+                // Buscamos el div que tenga data-name = nombreContacto
+                divContacto = document.querySelector(`.contact-user[data-name="${nombreContacto}"]`);
+            }
+
+            // Si existe el elemento, lo mandamos al principio de la lista
+            if (divContacto) {
+                lista.prepend(divContacto);
+            }
+        }
+
+        function actualizarBadge(nombreContacto, cantidad) {
+            let divContacto;
+            if (nombreContacto === "Chat General") {
+                divContacto = document.getElementById("contact-general");
+            } else {
+                divContacto = document.querySelector(`.contact-user[data-name="${nombreContacto}"]`);
+            }
+
+            if (divContacto) {
+                const badge = divContacto.querySelector(".unread-badge");
+                if (badge) {
+                    badge.innerText = cantidad;
+                    badge.style.display = "inline-block"; // Mostrarlo
+                }
+            }
+        }
+
+        function limpiarBadge(nombreContacto) {
+            // Resetear contador interno
+            contadoresNoLeidos[nombreContacto] = 0;
+            
+            // Ocultar badge visual
+            let divContacto;
+            if (nombreContacto === "Chat General") {
+                divContacto = document.getElementById("contact-general");
+            } else {
+                divContacto = document.querySelector(`.contact-user[data-name="${nombreContacto}"]`);
+            }
+
+            if (divContacto) {
+                const badge = divContacto.querySelector(".unread-badge");
+                if (badge) badge.style.display = "none";
+            }
+        }
+
+        function eliminarMensajeDePantalla(id) {
+            todosLosMensajes = todosLosMensajes.filter(m => m.id !== id);
+            const elemento = document.getElementById("msg-" + id);
+            if (elemento) elemento.remove();
+        }
+
         function solicitarBorrado(id) {
             if(confirm("¿Seguro que quieres borrar este mensaje?")) {
-                const payload = {
-                    action: "delete",
-                    id: id
-                };
+                const payload = { action: "delete", id: id };
                 socket.send(JSON.stringify(payload));
             }
         }
@@ -239,6 +312,10 @@
 
         function cambiarChat(nuevoDestinatario, avatarUrl) {
             chatActual = nuevoDestinatario;
+            
+            // --- NUEVO: AL ABRIR CHAT, LIMPIAMOS NOTIFICACIONES ---
+            limpiarBadge(chatActual);
+
             document.getElementById("titulo-chat").innerText = chatActual;
             const headerAvatar = document.getElementById("header-avatar");
             
@@ -265,7 +342,6 @@
 
             if (mostrar) {
                 const msgDiv = document.createElement("div");
-                // ASIGNAMOS UN ID ÚNICO AL DIV PARA PODER BORRARLO LUEGO
                 if (data.id) msgDiv.id = "msg-" + data.id;
 
                 if (data.sender === "Sistema") {
@@ -282,7 +358,6 @@
                     }
                     let inner = "";
                     
-                    // --- BOTÓN DE BASURA (Solo si es mío) ---
                     if (data.sender === username) {
                         inner += `<div class="delete-btn" onclick="solicitarBorrado(${data.id})"><i class="fas fa-trash"></i></div>`;
                     }
@@ -310,10 +385,7 @@
         }
 
         function enviarPayload(contenido) {
-            const payload = {
-                recipient: chatActual,
-                message: contenido
-            };
+            const payload = { recipient: chatActual, message: contenido };
             socket.send(JSON.stringify(payload));
         }
 
@@ -335,11 +407,15 @@
             const users = await resU.json();
             const container = document.getElementById("lista-contactos");
             
+            // 1. PRIMERO AGREGAMOS EL CHAT GENERAL
+            // Agregamos el <span class="unread-badge"></span> vacio
             container.innerHTML = `
                 <div class="contact active-chat" id="contact-general" onclick="cambiarChat('Chat General', '')"> 
                     <div class="user-avatar active-avatar"><i class="fas fa-users" style="color:#555;"></i></div>
                     <div class="contact-info">
-                        <div class="contact-name" style="font-weight:bold;">Chat General</div>
+                        <div class="contact-name" style="font-weight:bold;">
+                            Chat General
+                            <span class="unread-badge"></span> </div>
                         <div class="contact-last-msg" style="color:#666; font-size:12px;">Sala pública</div>
                     </div>
                 </div>
@@ -357,6 +433,7 @@
                 if (u.username !== username) {
                     const avatarUrl = u.avatar ? u.avatar : generarUrlAvatar(u.username);
                     
+                    // 2. AGREGAMOS A LOS USUARIOS CON EL SPAN BADGE
                     container.innerHTML += `
                     <div class="contact contact-user" data-name="${u.username}" onclick="cambiarChat('${u.username}', '${avatarUrl}')">
                         <div class="user-avatar"><img src="${avatarUrl}" alt="${u.username}"></div>
@@ -364,7 +441,7 @@
                             <div class="contact-name" style="font-weight:600;">
                                 ${u.username} 
                                 <span class="status-dot"></span>
-                            </div>
+                                <span class="unread-badge"></span> </div>
                             <div class="contact-last-msg estado-texto" style="color:#aaa; font-size:11px;">Desconectado</div>
                         </div>
                     </div>`;
