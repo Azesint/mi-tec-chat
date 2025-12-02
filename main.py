@@ -6,7 +6,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 app = FastAPI()
 
@@ -14,15 +14,15 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # --- BASE DE DATOS ---
 def init_db():
-    conn = sqlite3.connect('chat.db')
+    conn = sqlite3.connect('chat.db', timeout=30, check_same_thread=False)
     c = conn.cursor()
-    # Tabla Mensajes
+    # Mensajes
     c.execute('''CREATE TABLE IF NOT EXISTS mensajes
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, sender TEXT, recipient TEXT, message TEXT, timestamp TEXT, is_group INTEGER)''')
-    # Tabla Usuarios
+    # Usuarios (NUEVO: columna 'about')
     c.execute('''CREATE TABLE IF NOT EXISTS usuarios
-                 (username TEXT PRIMARY KEY, password_hash TEXT, avatar TEXT)''')
-    # NUEVA: Tabla Grupos (nombre, creador, lista_miembros_json)
+                 (username TEXT PRIMARY KEY, password_hash TEXT, avatar TEXT, about TEXT)''')
+    # Grupos
     c.execute('''CREATE TABLE IF NOT EXISTS grupos
                  (nombre TEXT PRIMARY KEY, creador TEXT, miembros TEXT)''')
     conn.commit()
@@ -30,14 +30,13 @@ def init_db():
 
 init_db()
 
-# --- FUNCIONES ---
+# --- FUNCIONES BASE DE DATOS ---
 def encriptar(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
 def guardar_mensaje_db(sender, recipient, message, timestamp, is_group):
     conn = sqlite3.connect('chat.db', timeout=30, check_same_thread=False)
     c = conn.cursor()
-    # is_group: 1 si es grupo, 0 si es privado
     c.execute("INSERT INTO mensajes (sender, recipient, message, timestamp, is_group) VALUES (?, ?, ?, ?, ?)", 
               (sender, recipient, message, timestamp, 1 if is_group else 0))
     conn.commit()
@@ -65,10 +64,11 @@ def obtener_mensajes_db():
 def obtener_usuarios_db():
     conn = sqlite3.connect('chat.db', timeout=30, check_same_thread=False)
     c = conn.cursor()
-    c.execute("SELECT username, avatar FROM usuarios")
+    # Recuperamos avatar y about
+    c.execute("SELECT username, avatar, about FROM usuarios")
     users = c.fetchall()
     conn.close()
-    return [{"username": u[0], "avatar": u[1] if u[1] else ""} for u in users]
+    return [{"username": u[0], "avatar": u[1] if u[1] else "", "about": u[2] if u[2] else "¡Hola! Uso TecChat"} for u in users]
 
 def actualizar_avatar_db(username, nueva_url):
     conn = sqlite3.connect('chat.db', timeout=30, check_same_thread=False)
@@ -77,61 +77,79 @@ def actualizar_avatar_db(username, nueva_url):
     conn.commit()
     conn.close()
 
-# --- NUEVAS FUNCIONES DE GRUPOS ---
+def actualizar_about_db(username, nuevo_about):
+    conn = sqlite3.connect('chat.db', timeout=30, check_same_thread=False)
+    c = conn.cursor()
+    c.execute("UPDATE usuarios SET about = ? WHERE username = ?", (nuevo_about, username))
+    conn.commit()
+    conn.close()
+
+# --- FUNCIONES DE GRUPOS ---
 def crear_grupo_db(nombre, creador, miembros_lista):
     conn = sqlite3.connect('chat.db', timeout=30, check_same_thread=False)
     c = conn.cursor()
-    # Guardamos la lista de miembros como Texto JSON (ej: '["Juan", "Pedro"]')
     miembros_json = json.dumps(miembros_lista)
     try:
         c.execute("INSERT INTO grupos VALUES (?, ?, ?)", (nombre, creador, miembros_json))
         conn.commit()
         return True
     except sqlite3.IntegrityError:
-        return False # Ya existe el grupo
+        return False
     finally:
         conn.close()
+
+def obtener_info_grupo_db(nombre_grupo):
+    conn = sqlite3.connect('chat.db', timeout=30, check_same_thread=False)
+    c = conn.cursor()
+    c.execute("SELECT creador, miembros FROM grupos WHERE nombre = ?", (nombre_grupo,))
+    row = c.fetchone()
+    conn.close()
+    if row:
+        return {"nombre": nombre_grupo, "creador": row[0], "miembros": json.loads(row[1])}
+    return None
+
+def modificar_miembros_grupo_db(nombre_grupo, nueva_lista):
+    conn = sqlite3.connect('chat.db', timeout=30, check_same_thread=False)
+    c = conn.cursor()
+    miembros_json = json.dumps(nueva_lista)
+    c.execute("UPDATE grupos SET miembros = ? WHERE nombre = ?", (miembros_json, nombre_grupo))
+    conn.commit()
+    conn.close()
 
 def obtener_grupos_usuario(username):
     conn = sqlite3.connect('chat.db', timeout=30, check_same_thread=False)
     c = conn.cursor()
     c.execute("SELECT nombre, miembros FROM grupos")
-    todos_los_grupos = c.fetchall()
+    todos = c.fetchall()
     conn.close()
-    
     mis_grupos = []
-    for grupo in todos_los_grupos:
-        nombre = grupo[0]
-        miembros = json.loads(grupo[1]) # Convertir texto a lista
+    for g in todos:
+        miembros = json.loads(g[1])
         if username in miembros:
-            mis_grupos.append({"nombre": nombre, "miembros": miembros})
+            mis_grupos.append({"nombre": g[0], "miembros": miembros})
     return mis_grupos
-
-def obtener_miembros_grupo(nombre_grupo):
-    conn = sqlite3.connect('chat.db', timeout=30, check_same_thread=False)
-    c = conn.cursor()
-    c.execute("SELECT miembros FROM grupos WHERE nombre = ?", (nombre_grupo,))
-    row = c.fetchone()
-    conn.close()
-    if row:
-        return json.loads(row[0])
-    return []
 
 # --- MODELOS ---
 class UserAuth(BaseModel):
     username: str
     password: str
 
-class UserAvatarUpdate(BaseModel):
+class UserUpdate(BaseModel):
     username: str
-    avatar_url: str
+    avatar_url: Optional[str] = None
+    about: Optional[str] = None
 
 class NewGroup(BaseModel):
     nombre: str
     creador: str
     miembros: List[str]
 
-# --- CONEXIÓN ---
+class GroupAction(BaseModel):
+    nombre_grupo: str
+    solicitante: str
+    target_user: str
+
+# --- WEBSOCKET MANAGER ---
 class ConnectionManager:
     def __init__(self):
         self.active_connections: Dict[str, WebSocket] = {}
@@ -147,27 +165,22 @@ class ConnectionManager:
 
     async def broadcast_online_list(self):
         online_users = list(self.active_connections.keys())
-        message = json.dumps({"type": "STATUS", "online_users": online_users})
-        for connection in self.active_connections.values():
-            await connection.send_text(message)
+        msg = json.dumps({"type": "STATUS", "online_users": online_users})
+        for conn in self.active_connections.values():
+            await conn.send_text(msg)
 
-    # Enviar a UNO (Privado)
     async def send_personal_message(self, message_json: str, recipient_id: str):
         if recipient_id in self.active_connections:
-            websocket = self.active_connections[recipient_id]
-            await websocket.send_text(message_json)
+            await self.active_connections[recipient_id].send_text(message_json)
 
-    # Enviar a TODOS (Chat General)
     async def broadcast(self, message_json: str):
-        for connection in self.active_connections.values():
-            await connection.send_text(message_json)
+        for conn in self.active_connections.values():
+            await conn.send_text(message_json)
 
-    # Enviar a GRUPO (Lista de usuarios)
     async def broadcast_to_group(self, message_json: str, members_list: List[str]):
         for member in members_list:
             if member in self.active_connections:
-                websocket = self.active_connections[member]
-                await websocket.send_text(message_json)
+                await self.active_connections[member].send_text(message_json)
 
 manager = ConnectionManager()
 
@@ -196,36 +209,71 @@ async def signup(user: UserAuth):
     c.execute("SELECT username FROM usuarios WHERE username = ?", (user.username,))
     if c.fetchone():
         conn.close()
-        raise HTTPException(status_code=400, detail="El usuario ya existe.")
-    c.execute("INSERT INTO usuarios VALUES (?, ?, ?)", (user.username, encriptar(user.password), None))
+        raise HTTPException(status_code=400, detail="Usuario existente.")
+    # Default about: "Disponible"
+    c.execute("INSERT INTO usuarios VALUES (?, ?, ?, ?)", (user.username, encriptar(user.password), None, "Disponible"))
     conn.commit()
     conn.close()
     return {"message": "Creado"}
 
 @app.post("/update-avatar")
-async def update_avatar(data: UserAvatarUpdate):
+async def update_avatar(data: UserUpdate):
     actualizar_avatar_db(data.username, data.avatar_url)
     return {"message": "Avatar actualizado"}
 
-# RUTA CREAR GRUPO
+@app.post("/update-about")
+async def update_about(data: UserUpdate):
+    actualizar_about_db(data.username, data.about)
+    return {"message": "Estado actualizado"}
+
+# -- GRUPOS --
 @app.post("/crear-grupo")
 async def create_group(grupo: NewGroup):
-    # Validar que haya al menos 2 miembros (incluyendo el creador)
-    members = list(set(grupo.miembros)) # Quitar duplicados
+    members = list(set(grupo.miembros))
     if grupo.creador not in members: members.append(grupo.creador)
-    
-    if len(members) < 2:
-        raise HTTPException(status_code=400, detail="Se necesitan al menos 2 miembros")
-    
+    if len(members) < 1: raise HTTPException(status_code=400, detail="Faltan miembros")
     exito = crear_grupo_db(grupo.nombre, grupo.creador, members)
-    if not exito:
-        raise HTTPException(status_code=400, detail="Ya existe un grupo con ese nombre")
-    
+    if not exito: raise HTTPException(status_code=400, detail="El grupo ya existe")
     return {"message": "Grupo creado"}
 
 @app.get("/mis-grupos/{username}")
 async def get_my_groups(username: str):
     return obtener_grupos_usuario(username)
+
+@app.get("/grupo/{nombre}")
+async def get_group_info(nombre: str):
+    return obtener_info_grupo_db(nombre)
+
+@app.post("/grupo/agregar")
+async def add_member(action: GroupAction):
+    info = obtener_info_grupo_db(action.nombre_grupo)
+    if not info: raise HTTPException(404, "Grupo no existe")
+    
+    # Solo creador o miembros pueden agregar (aqui dejamos que creador mande)
+    # Para simplificar, cualquiera del grupo puede agregar, pero solo creador puede echar
+    if action.solicitante not in info["miembros"]:
+        raise HTTPException(403, "No eres del grupo")
+        
+    if action.target_user not in info["miembros"]:
+        info["miembros"].append(action.target_user)
+        modificar_miembros_grupo_db(action.nombre_grupo, info["miembros"])
+        
+    return {"message": "Agregado"}
+
+@app.post("/grupo/expulsar")
+async def kick_member(action: GroupAction):
+    info = obtener_info_grupo_db(action.nombre_grupo)
+    if not info: raise HTTPException(404, "Grupo no existe")
+    
+    # SOLO EL CREADOR PUEDE EXPULSAR
+    if info["creador"] != action.solicitante:
+        raise HTTPException(403, "Solo el creador puede expulsar")
+        
+    if action.target_user in info["miembros"]:
+        info["miembros"].remove(action.target_user)
+        modificar_miembros_grupo_db(action.nombre_grupo, info["miembros"])
+        
+    return {"message": "Expulsado"}
 
 @app.get("/lista-usuarios/")
 async def get_users():
@@ -246,46 +294,35 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
         while True:
             raw_data = await websocket.receive_text()
             data_json = json.loads(raw_data)
-            
-            tipo_accion = data_json.get("action", "message") 
+            tipo = data_json.get("action", "message") 
 
-            if tipo_accion == "delete":
+            if tipo == "delete":
                 msg_id = data_json["id"]
-                exito = borrar_mensaje_db(msg_id, client_id)
-                if exito:
-                    delete_msg = json.dumps({"type": "DELETE", "id": msg_id})
-                    await manager.broadcast(delete_msg)
+                if borrar_mensaje_db(msg_id, client_id):
+                    await manager.broadcast(json.dumps({"type": "DELETE", "id": msg_id}))
             
             else:
                 recipient = data_json["recipient"]
                 message = data_json["message"]
-                # Detectamos si es un grupo (lo manda el frontend)
-                is_group = data_json.get("is_group", False) 
-                
+                is_group = data_json.get("is_group", False)
                 hora_actual = datetime.now().strftime("%I:%M %p") 
                 
                 nuevo_id = guardar_mensaje_db(client_id, recipient, message, hora_actual, is_group)
                 
-                response_msg = json.dumps({
-                    "type": "CHAT",
-                    "id": nuevo_id,
-                    "sender": client_id,
-                    "recipient": recipient,
-                    "message": message,
-                    "timestamp": hora_actual,
-                    "is_group": is_group
+                resp = json.dumps({
+                    "type": "CHAT", "id": nuevo_id, "sender": client_id,
+                    "recipient": recipient, "message": message, "timestamp": hora_actual, "is_group": is_group
                 })
                 
                 if recipient == "Chat General":
-                    await manager.broadcast(response_msg)
+                    await manager.broadcast(resp)
                 elif is_group:
-                    # Lógica de Grupo: Buscar miembros y enviar a ellos
-                    miembros = obtener_miembros_grupo(recipient)
-                    await manager.broadcast_to_group(response_msg, miembros)
+                    info_grupo = obtener_info_grupo_db(recipient)
+                    if info_grupo:
+                        await manager.broadcast_to_group(resp, info_grupo["miembros"])
                 else:
-                    # Privado normal
-                    await manager.send_personal_message(response_msg, recipient)
-                    await manager.send_personal_message(response_msg, client_id)
+                    await manager.send_personal_message(resp, recipient)
+                    await manager.send_personal_message(resp, client_id)
             
     except WebSocketDisconnect:
         manager.disconnect(client_id)
