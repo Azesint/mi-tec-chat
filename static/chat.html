@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TecChat - Pro</title>
+    <title>TecChat - Final</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* --- ESTILOS VISUALES (TEMA AMARILLO) --- */
+        /* --- ESTILOS VISUALES --- */
         body { margin: 0; font-family: 'Segoe UI', sans-serif; height: 100vh; overflow: hidden; background-color: #fff; }
         .app-container { display: flex; width: 100%; height: 100vh; max-width: none; margin: 0; background: #fff; }
         
@@ -36,6 +36,13 @@
             align-items: center; justify-content: center; cursor: pointer; z-index: 10; border: 1px solid white;
         }
         .change-avatar-btn:hover { transform: scale(1.1); }
+
+        /* BOTÓN DE SALIR (NUEVO) */
+        .logout-btn {
+            color: #ff4444; cursor: pointer; font-size: 18px; margin-left: 10px;
+            padding: 5px; transition: transform 0.2s;
+        }
+        .logout-btn:hover { transform: scale(1.2); }
         
         .status-dot { height: 10px; width: 10px; background-color: #ccc; border-radius: 50%; display: inline-block; margin-left: 8px; box-shadow: 0 0 2px rgba(0,0,0,0.2); transition: background-color 0.3s; }
         .is-online { background-color: #25d366; box-shadow: 0 0 5px #25d366; }
@@ -81,6 +88,7 @@
             .contact { justify-content: center; padding: 15px 0; }
             .sidebar-header { justify-content: center; }
             .unread-badge { position: absolute; top: 5px; right: 5px; }
+            .logout-btn { position: absolute; top: 20px; right: 10px; } /* Ajuste movil */
         }
     </style>
 </head>
@@ -96,6 +104,8 @@
                     </div>
                 </div>
                 <span id="mi-nombre-display">Mi Perfil</span>
+                
+                <i class="fas fa-sign-out-alt logout-btn" onclick="cerrarSesion()" title="Cerrar Sesión"></i>
             </div>
             
             <div class="search-box">
@@ -129,16 +139,22 @@
     </div>
 
     <script>
-        // --- SEGURIDAD: LEER USUARIO DEL LOCALSTORAGE ---
         const username = localStorage.getItem("tecchat_usuario");
         if (!username) { window.location.href = "/"; }
         document.getElementById("mi-nombre-display").innerText = username;
+
+        // --- FUNCIÓN CERRAR SESIÓN ---
+        function cerrarSesion() {
+            if(confirm("¿Quieres cerrar sesión?")) {
+                localStorage.removeItem("tecchat_usuario"); // Borramos la memoria
+                window.location.href = "/"; // Volvemos al inicio
+            }
+        }
 
         let chatActual = "Chat General"; 
         let todosLosMensajes = []; 
         let contadoresNoLeidos = {}; 
 
-        // --- FILTRO DE BÚSQUEDA ---
         function filtrarContactos() {
             const input = document.getElementById('input-busqueda');
             const filtro = input.value.toUpperCase();
@@ -154,7 +170,6 @@
             }
         }
 
-        // --- AVATARES ---
         function generarUrlAvatar(semilla) {
             return `https://api.dicebear.com/7.x/avataaars/svg?seed=${semilla}`;
         }
@@ -172,13 +187,11 @@
             } catch(e) { console.error("Error guardando avatar", e); }
         }
 
-        // --- WEBSOCKET ---
         const protocol = window.location.protocol === "https:" ? "wss" : "ws";
         const socket = new WebSocket(`${protocol}://${window.location.host}/ws/${username}`);
 
         socket.onmessage = function(event) {
             const data = JSON.parse(event.data);
-            
             if (data.type === "STATUS") {
                 actualizarEstadoUsuarios(data.online_users);
             } 
@@ -192,7 +205,6 @@
             }
         };
 
-        // --- LÓGICA DE NOTIFICACIONES Y REORDENAMIENTO ---
         function manejarNotificacion(data) {
             if (data.sender === username) {
                 moverContactoArriba(data.recipient);
@@ -362,39 +374,26 @@
             if (e.key === "Enter") sendMessage();
         });
 
-        // --- AQUÍ ESTÁ LA NUEVA MAGIA: COMPRESIÓN DE IMÁGENES ---
         document.getElementById('image-input').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
             reader.onload = function(event) {
-                // Creamos una imagen virtual
                 const img = new Image();
                 img.onload = function() {
-                    // Creamos un canvas (lienzo) para redimensionar
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
-
-                    // Definimos el tamaño máximo (800px es buen balance calidad/peso)
                     const MAX_WIDTH = 800;
                     let width = img.width;
                     let height = img.height;
-
-                    // Si es muy grande, la achicamos proporcionalmente
                     if (width > MAX_WIDTH) {
                         height *= MAX_WIDTH / width;
                         width = MAX_WIDTH;
                     }
-
                     canvas.width = width;
                     canvas.height = height;
                     ctx.drawImage(img, 0, 0, width, height);
-
-                    // Convertimos a JPEG comprimido (Calidad 0.7)
-                    // Esto reduce el peso drásticamente (de 3MB a ~100KB)
                     const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-                    
                     enviarPayload(dataUrl);
                 };
                 img.src = event.target.result;
