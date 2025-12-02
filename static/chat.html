@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TecChat - Seguro</title>
+    <title>TecChat - Pro</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* --- ESTILOS VISUALES --- */
+        /* --- ESTILOS VISUALES (TEMA AMARILLO) --- */
         body { margin: 0; font-family: 'Segoe UI', sans-serif; height: 100vh; overflow: hidden; background-color: #fff; }
         .app-container { display: flex; width: 100%; height: 100vh; max-width: none; margin: 0; background: #fff; }
         
@@ -131,18 +131,14 @@
     <script>
         // --- SEGURIDAD: LEER USUARIO DEL LOCALSTORAGE ---
         const username = localStorage.getItem("tecchat_usuario");
-
-        // Si no hay usuario guardado, lo mandamos al login para que se identifique
-        if (!username) {
-            window.location.href = "/";
-        }
-        
+        if (!username) { window.location.href = "/"; }
         document.getElementById("mi-nombre-display").innerText = username;
 
         let chatActual = "Chat General"; 
         let todosLosMensajes = []; 
         let contadoresNoLeidos = {}; 
 
+        // --- FILTRO DE BÚSQUEDA ---
         function filtrarContactos() {
             const input = document.getElementById('input-busqueda');
             const filtro = input.value.toUpperCase();
@@ -158,6 +154,7 @@
             }
         }
 
+        // --- AVATARES ---
         function generarUrlAvatar(semilla) {
             return `https://api.dicebear.com/7.x/avataaars/svg?seed=${semilla}`;
         }
@@ -175,6 +172,7 @@
             } catch(e) { console.error("Error guardando avatar", e); }
         }
 
+        // --- WEBSOCKET ---
         const protocol = window.location.protocol === "https:" ? "wss" : "ws";
         const socket = new WebSocket(`${protocol}://${window.location.host}/ws/${username}`);
 
@@ -194,6 +192,7 @@
             }
         };
 
+        // --- LÓGICA DE NOTIFICACIONES Y REORDENAMIENTO ---
         function manejarNotificacion(data) {
             if (data.sender === username) {
                 moverContactoArriba(data.recipient);
@@ -363,11 +362,43 @@
             if (e.key === "Enter") sendMessage();
         });
 
+        // --- AQUÍ ESTÁ LA NUEVA MAGIA: COMPRESIÓN DE IMÁGENES ---
         document.getElementById('image-input').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
+
             const reader = new FileReader();
-            reader.onload = function(event) { enviarPayload(event.target.result); };
+            reader.onload = function(event) {
+                // Creamos una imagen virtual
+                const img = new Image();
+                img.onload = function() {
+                    // Creamos un canvas (lienzo) para redimensionar
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+
+                    // Definimos el tamaño máximo (800px es buen balance calidad/peso)
+                    const MAX_WIDTH = 800;
+                    let width = img.width;
+                    let height = img.height;
+
+                    // Si es muy grande, la achicamos proporcionalmente
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Convertimos a JPEG comprimido (Calidad 0.7)
+                    // Esto reduce el peso drásticamente (de 3MB a ~100KB)
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                    
+                    enviarPayload(dataUrl);
+                };
+                img.src = event.target.result;
+            };
             reader.readAsDataURL(file);
             e.target.value = ''; 
         });
