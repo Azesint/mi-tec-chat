@@ -7,46 +7,65 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
+        /* --- RESET Y BASICS --- */
         * { box-sizing: border-box; }
         body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: #fff; position: fixed; width: 100%; height: 100dvh; overflow: hidden; }
         .app-container { display: flex; width: 100%; height: 100%; background: #fff; }
         
-        .sidebar { width: 300px; min-width: 250px; border-right: 1px solid #eee; display: flex; flex-direction: column; background-color: #f9f9f9; }
-        .sidebar-header { padding: 15px; background: #fff; border-bottom: 3px solid #ffd700; display: flex; justify-content: space-between; align-items: center; height: auto; min-height: 60px; flex-shrink: 0; }
+        /* --- SIDEBAR (LISTA DE CONTACTOS) --- */
+        .sidebar { 
+            width: 350px; 
+            min-width: 300px; 
+            border-right: 1px solid #eee; 
+            display: flex; 
+            flex-direction: column; 
+            background-color: #fff; 
+            z-index: 20; /* Para que quede encima en movil si es necesario */
+        }
         
-        /* PERFIL PROPIO */
+        .sidebar-header { padding: 15px; background: #fff; border-bottom: 3px solid #ffd700; display: flex; justify-content: space-between; align-items: center; height: 60px; flex-shrink: 0; }
+        
         .my-profile-info { display: flex; flex-direction: column; margin-left: 10px; }
         .my-name { font-weight: bold; font-size: 14px; }
         .my-about { font-size: 11px; color: #666; cursor: pointer; display: flex; align-items: center; gap: 5px; }
-        .my-about:hover { color: #007bff; }
-
+        
         .search-box { padding: 10px; border-bottom: 1px solid #eee; flex-shrink: 0; display: flex; gap: 5px;}
         .search-input { width: 100%; padding: 8px; border-radius: 20px; border: 2px solid #eee; outline: none; }
         .search-input:focus { border-color: #ffd700; } 
+        
         .contact-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; -webkit-overflow-scrolling: touch; }
         
+        /* ESTILO DE CONTACTO (ESTILO WHATSAPP) */
         .contact { display: flex; align-items: center; padding: 15px; cursor: pointer; border-bottom: 1px solid #f0f0f0; order: 1; position: relative; }
-        .contact:hover { background-color: #fff9c4; } 
+        .contact:hover { background-color: #f5f5f5; } 
         .contact.active-chat { background-color: #ffe082; } 
         
-        .user-avatar { width: 45px; height: 45px; background: #eee; border-radius: 50%; margin-right: 10px; overflow: visible; display: flex; align-items: center; justify-content: center; border: 2px solid transparent; position: relative; flex-shrink: 0; }
+        .user-avatar { width: 50px; height: 50px; background: #eee; border-radius: 50%; margin-right: 15px; overflow: visible; display: flex; align-items: center; justify-content: center; border: 2px solid transparent; position: relative; flex-shrink: 0; }
         .user-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
-        .user-avatar i { font-size: 20px; color: #555; }
+        .user-avatar i { font-size: 24px; color: #555; }
         .active-avatar { border-color: #ffd700; }
 
-        .change-avatar-btn { position: absolute; bottom: -5px; right: -5px; background: #000; color: #ffd700; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 20; border: 1px solid white; }
-        .logout-btn { color: #ff4444; cursor: pointer; font-size: 18px; margin-left: 10px; padding: 5px; }
-        .add-group-btn { background: #ffd700; border: none; width: 35px; height: 35px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        
-        .status-dot { height: 10px; width: 10px; background-color: #ccc; border-radius: 50%; display: inline-block; margin-left: 8px; transition: background-color 0.3s; }
-        .is-online { background-color: #25d366; box-shadow: 0 0 5px #25d366; }
-        .unread-badge { background-color: #ff3b30; color: white; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 10px; margin-left: auto; display: none; }
+        .contact-info { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        .contact-name { font-weight: 600; font-size: 15px; margin-bottom: 3px; display: flex; align-items: center; justify-content: space-between; }
+        .contact-last-msg { font-size: 13px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
 
+        .change-avatar-btn { position: absolute; bottom: -2px; right: -2px; background: #000; color: #ffd700; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 20; border: 1px solid white; }
+        .logout-btn { color: #ff4444; cursor: pointer; font-size: 18px; margin-left: 10px; padding: 5px; }
+        .add-group-btn { background: #ffd700; border: none; width: 35px; height: 35px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        
+        .status-dot { height: 10px; width: 10px; background-color: #ccc; border-radius: 50%; display: inline-block; margin-left: 5px; transition: background-color 0.3s; }
+        .is-online { background-color: #25d366; box-shadow: 0 0 5px #25d366; }
+        
+        /* Badge rojo */
+        .unread-badge { background-color: #ff3b30; color: white; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 10px; display: none; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+
+        /* --- CHAT AREA --- */
         .chat-area { flex: 1; display: flex; flex-direction: column; background: #e5e5e5; background-image: radial-gradient(#ccc 1px, transparent 1px); background-size: 20px 20px; position: relative; overflow: hidden; }
         
-        /* CABECERA CLICKEABLE PARA VER INFO GRUPO */
         .chat-header { padding: 0 15px; height: 60px; background: #fff; border-bottom: 1px solid #ddd; display: flex; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); z-index: 10; flex-shrink: 0; cursor: pointer; }
-        .chat-header:hover { background-color: #f9f9f9; }
+        
+        /* BOTÓN ATRÁS (Solo visible en móvil) */
+        .back-btn { display: none; margin-right: 15px; font-size: 20px; color: #555; cursor: pointer; }
 
         .chat-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; -webkit-overflow-scrolling: touch; }
         .message { max-width: 85%; padding: 10px 15px; border-radius: 10px; font-size: 15px; box-shadow: 0 1px 1px rgba(0,0,0,0.1); word-wrap: break-word; position: relative;}
@@ -73,23 +92,35 @@
         .member-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f9f9f9; }
         .kick-btn { color: red; cursor: pointer; font-size: 14px; }
         .admin-crown { color: gold; margin-left: 5px; }
-        
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; }
         .btn-modal { padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; }
         .btn-cancel { background: #ddd; }
         .btn-create { background: #ffd700; color: black; font-weight: bold; }
 
+        /* --- DISEÑO MÓVIL ESTILO APP --- */
         @media (max-width: 768px) {
-            .sidebar { width: 80px; min-width: 80px; } 
-            .my-profile-info, .sidebar-header span { display: none; } 
-            .sidebar-header { flex-direction: column; padding: 15px 0; gap: 10px; }
-            .user-avatar { margin-right: 0; }
-            .contact { justify-content: center; padding: 15px 0; }
-            .unread-badge { position: absolute; top: 5px; right: 5px; display: none; }
-            .contact-user.user-online .user-avatar::after { content: ''; position: absolute; bottom: 0; right: 0; width: 12px; height: 12px; background-color: #25d366; border: 2px solid white; border-radius: 50%; z-index: 10; display: block; }
+            /* 1. La Sidebar ocupa TODO el ancho inicialmente */
+            .sidebar { 
+                width: 100%; 
+                display: flex; /* Visible al inicio */
+            }
+            
+            /* 2. El Chat Area está OCULTO inicialmente */
+            .chat-area { 
+                display: none; /* Oculto */
+                width: 100%;
+            }
+
+            /* Clases para alternar vistas con JS */
+            body.chat-active .sidebar { display: none; }
+            body.chat-active .chat-area { display: flex; }
+
+            /* 3. Mostrar botón atrás */
+            .back-btn { display: block; }
+
+            /* Ajustes estéticos */
+            .contact-last-msg { max-width: 70vw; } /* Más espacio para texto */
             .message.sent .delete-btn { display: flex; opacity: 0.8; }
-            .search-box { flex-direction: column; }
-            .add-group-btn { width: 100%; border-radius: 5px; margin-top: 5px; }
         }
     </style>
 </head>
@@ -125,11 +156,13 @@
         </div>
 
         <div class="chat-area">
-            <div class="chat-header" onclick="verInfoChatActual()">
-                <div class="user-avatar active-avatar" id="header-avatar">
+            <div class="chat-header">
+                <i class="fas fa-arrow-left back-btn" onclick="volverALista()"></i>
+
+                <div class="user-avatar active-avatar" id="header-avatar" onclick="verInfoChatActual()">
                     <i class="fas fa-users"></i>
                 </div>
-                <div>
+                <div onclick="verInfoChatActual()" style="flex:1;">
                     <div class="contact-name" id="titulo-chat" style="font-weight:bold;">Chat General</div>
                     <small id="subtitulo-chat" style="color:#666;">Toca para info</small>
                 </div>
@@ -167,13 +200,11 @@
             <p><strong>Creador:</strong> <span id="info-creador"></span></p>
             <p>Miembros:</p>
             <div id="info-lista-miembros" class="modal-list"></div>
-            
             <div id="info-agregar-container" style="border-top:1px solid #eee; padding-top:10px;">
                 <p>Agregar participante:</p>
                 <select id="select-agregar-usuario" class="search-input" style="margin-bottom:5px;"></select>
                 <button class="btn-modal btn-create" style="width:100%;" onclick="agregarMiembroGrupo()">Agregar</button>
             </div>
-
             <div class="modal-actions">
                 <button class="btn-modal btn-cancel" onclick="cerrarModal('modal-info')">Cerrar</button>
             </div>
@@ -192,13 +223,26 @@
             }
         }
 
-        let chatActual = "Chat General";
+        // --- NAVEGACIÓN MÓVIL ---
+        function irAChat() {
+            // Agrega clase al body para ocultar lista y mostrar chat
+            document.body.classList.add("chat-active");
+        }
+
+        function volverALista() {
+            // Quita clase para mostrar lista y ocultar chat
+            document.body.classList.remove("chat-active");
+            // Limpia chat actual
+            chatActual = ""; 
+            actualizarClaseActiva();
+        }
+
+        let chatActual = ""; // Empezamos sin chat seleccionado en movil
         let esGrupoActual = false;
         let todosLosMensajes = []; 
         let contadoresNoLeidos = {}; 
         let todosLosUsuarios = [];
 
-        // --- EDITAR ESTADO (ABOUT) ---
         async function editarMiAbout() {
             const nuevo = prompt("Escribe tu estado (ej: Ocupado):");
             if(nuevo && nuevo.trim() !== "") {
@@ -212,83 +256,53 @@
             }
         }
 
-        // --- INFO GRUPO / GESTIÓN ---
         async function verInfoChatActual() {
-            if (!esGrupoActual) return; // Solo funciona en grupos
-            
+            if (!esGrupoActual) return;
             const modal = document.getElementById("modal-info");
             document.getElementById("info-titulo").innerText = chatActual;
-            
-            // Pedir info al server
             const res = await fetch(`/grupo/${chatActual}`);
             if(!res.ok) return;
             const info = await res.json();
-            
             document.getElementById("info-creador").innerText = info.creador;
             const lista = document.getElementById("info-lista-miembros");
             lista.innerHTML = "";
-
             const soyCreador = (info.creador === username);
-
             info.miembros.forEach(m => {
-                let html = `<div class="member-item">
-                    <span>${m} ${m === info.creador ? '<i class="fas fa-crown admin-crown"></i>' : ''}</span>`;
-                
-                // Si soy el creador y este miembro no soy yo, muestro botón borrar
-                if (soyCreador && m !== username) {
-                    html += `<i class="fas fa-trash kick-btn" onclick="expulsarDeGrupo('${m}')"></i>`;
-                }
+                let html = `<div class="member-item"><span>${m} ${m === info.creador ? '<i class="fas fa-crown admin-crown"></i>' : ''}</span>`;
+                if (soyCreador && m !== username) { html += `<i class="fas fa-trash kick-btn" onclick="expulsarDeGrupo('${m}')"></i>`; }
                 html += `</div>`;
                 lista.innerHTML += html;
             });
-
-            // Llenar select para agregar (usuarios que NO estan en el grupo)
             const select = document.getElementById("select-agregar-usuario");
             select.innerHTML = "";
             todosLosUsuarios.forEach(u => {
-                if (!info.miembros.includes(u.username)) {
-                    select.innerHTML += `<option value="${u.username}">${u.username}</option>`;
-                }
+                if (!info.miembros.includes(u.username)) { select.innerHTML += `<option value="${u.username}">${u.username}</option>`; }
             });
-
             modal.style.display = "flex";
         }
 
         async function expulsarDeGrupo(target) {
             if(!confirm(`¿Expulsar a ${target}?`)) return;
-            await fetch("/grupo/expulsar", {
-                method: "POST", headers: {"Content-Type":"application/json"},
-                body: JSON.stringify({nombre_grupo: chatActual, solicitante: username, target_user: target})
-            });
-            verInfoChatActual(); // Recargar modal
+            await fetch("/grupo/expulsar", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({nombre_grupo: chatActual, solicitante: username, target_user: target}) });
+            verInfoChatActual();
         }
 
         async function agregarMiembroGrupo() {
             const target = document.getElementById("select-agregar-usuario").value;
             if(!target) return;
-            await fetch("/grupo/agregar", {
-                method: "POST", headers: {"Content-Type":"application/json"},
-                body: JSON.stringify({nombre_grupo: chatActual, solicitante: username, target_user: target})
-            });
-            verInfoChatActual(); // Recargar modal
+            await fetch("/grupo/agregar", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({nombre_grupo: chatActual, solicitante: username, target_user: target}) });
+            verInfoChatActual();
         }
 
-        // --- RESTO DE FUNCIONES (Iguales) ---
-        function generarUrlAvatar(semilla) {
-            return `https://api.dicebear.com/7.x/avataaars/svg?seed=${semilla}`;
-        }
+        function generarUrlAvatar(semilla) { return `https://api.dicebear.com/7.x/avataaars/svg?seed=${semilla}`; }
 
         async function cambiarMiAvatar() {
             const randomSeed = username + Math.floor(Math.random() * 10000);
             const nuevaUrl = generarUrlAvatar(randomSeed);
             document.getElementById("mi-avatar-container").innerHTML = `<img src="${nuevaUrl}" alt="Yo">`;
-            await fetch("/update-avatar", {
-                method: "POST", headers: {"Content-Type":"application/json"},
-                body: JSON.stringify({username: username, avatar_url: nuevaUrl})
-            });
+            await fetch("/update-avatar", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({username: username, avatar_url: nuevaUrl}) });
         }
 
-        // --- WEBSOCKET ---
         const protocol = window.location.protocol === "https:" ? "wss" : "ws";
         const socket = new WebSocket(`${protocol}://${window.location.host}/ws/${username}`);
 
@@ -319,7 +333,6 @@
             }
         }
 
-        // (Funciones moverContactoArriba, actualizarBadge, limpiarBadge... iguales al anterior)
         function moverContactoArriba(nombre) {
             const lista = document.getElementById("lista-contactos");
             let el = (nombre === "Chat General") ? document.getElementById("contact-general") : document.querySelector(`.contact[data-name="${nombre}"]`);
@@ -360,9 +373,14 @@
 
         function cambiarChat(nuevo, avatar, esGrupo=false) {
             chatActual=nuevo; esGrupoActual=esGrupo; limpiarBadge(chatActual);
+            
+            // MODO MÓVIL: Transición
+            if (window.innerWidth <= 768) {
+                irAChat(); // Cambia de pantalla
+            }
+
             document.getElementById("titulo-chat").innerText=chatActual;
             document.getElementById("subtitulo-chat").innerText = esGrupo ? "Toca para ver miembros" : "En línea";
-            
             const head=document.getElementById("header-avatar");
             if(chatActual==="Chat General") { head.innerHTML=`<i class="fas fa-users"></i>`; }
             else if(esGrupo) { head.innerHTML=`<i class="fas fa-user-friends"></i>`; head.style.backgroundColor="#e1bee7"; }
@@ -481,7 +499,15 @@
             });
 
             const resH=await fetch("/historial"); const hist=await resH.json();
-            todosLosMensajes=hist; hist.forEach(msg=>renderizarMensaje(msg));
+            todosLosMensajes=hist; 
+            
+            // Si es escritorio, cargamos el chat general al inicio
+            if(window.innerWidth > 768) {
+                hist.forEach(msg=>renderizarMensaje(msg));
+            } else {
+                // Si es movil, no renderizamos mensajes hasta que elija uno
+                chatActual = "";
+            }
         }
 
         inicializar();
