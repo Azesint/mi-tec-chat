@@ -1,7 +1,7 @@
 import sqlite3
 import json
 import hashlib
-import re  # <--- IMPORTANTE: Para validar contraseñas
+import re
 from datetime import datetime
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -33,18 +33,12 @@ def encriptar(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
 def validar_password_fuerte(password):
-    """Retorna True si es fuerte, o el mensaje de error si no."""
-    if len(password) < 8:
-        return "Mínimo 8 caracteres."
-    if not re.search(r"[A-Z]", password):
-        return "Falta una mayúscula."
-    if not re.search(r"[a-z]", password):
-        return "Falta una minúscula."
-    if not re.search(r"\d", password):
-        return "Falta un número."
+    if len(password) < 8: return "Mínimo 8 caracteres."
+    if not re.search(r"[A-Z]", password): return "Falta una mayúscula."
+    if not re.search(r"[a-z]", password): return "Falta una minúscula."
+    if not re.search(r"\d", password): return "Falta un número."
     return True
 
-# (El resto de funciones de DB siguen igual...)
 def guardar_mensaje_db(sender, recipient, message, timestamp, is_group):
     conn = sqlite3.connect('chat.db', timeout=30, check_same_thread=False)
     c = conn.cursor()
@@ -165,6 +159,8 @@ class ConnectionManager:
     async def connect(self, websocket: WebSocket, client_id: str):
         await websocket.accept()
         self.active_connections[client_id] = websocket
+        # Al conectar, avisamos a todos que actualicen su lista y su estado
+        await self.broadcast_refresh() 
         await self.broadcast_online_list()
 
     def disconnect(self, client_id: str):
@@ -174,6 +170,12 @@ class ConnectionManager:
     async def broadcast_online_list(self):
         online_users = list(self.active_connections.keys())
         msg = json.dumps({"type": "STATUS", "online_users": online_users})
+        for conn in self.active_connections.values():
+            await conn.send_text(msg)
+
+    # NUEVO: AVISAR QUE REFRESQUEN LISTA
+    async def broadcast_refresh(self):
+        msg = json.dumps({"type": "REFRESH_USERS"})
         for conn in self.active_connections.values():
             await conn.send_text(msg)
 
@@ -211,19 +213,15 @@ async def login(user: UserAuth):
 
 @app.post("/signup")
 async def signup(user: UserAuth):
-    # --- VALIDACIÓN DE CONTRASEÑA ---
-    validacion = validar_password_fuerte(user.password)
-    if validacion != True:
-        # Si no es fuerte, devolvemos error 400 con la razón
-        raise HTTPException(status_code=400, detail=validacion)
+    val = validar_password_fuerte(user.password)
+    if val != True: raise HTTPException(status_code=400, detail=val)
 
     conn = sqlite3.connect('chat.db', timeout=30, check_same_thread=False)
     c = conn.cursor()
     c.execute("SELECT username FROM usuarios WHERE username = ?", (user.username,))
     if c.fetchone():
         conn.close()
-        raise HTTPException(status_code=400, detail="El usuario ya existe.")
-    
+        raise HTTPException(status_code=400, detail="Usuario existente.")
     c.execute("INSERT INTO usuarios VALUES (?, ?, ?, ?)", (user.username, encriptar(user.password), None, "Disponible"))
     conn.commit()
     conn.close()
@@ -326,7 +324,10 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
             
     except WebSocketDisconnect:
         manager.disconnect(client_id)
+        # AL SALIR, TAMBIÉN ACTUALIZAMOS LISTAS Y ESTADO
+        await manager.broadcast_refresh()
         await manager.broadcast_online_list()
+        
         now = datetime.utcnow().isoformat() + "Z"
         sys_msg = json.dumps({"type": "CHAT", "sender": "Sistema", "recipient": "Todos", "message": f"{client_id} ha salido", "timestamp": now})
         await manager.broadcast(sys_msg)
