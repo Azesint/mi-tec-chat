@@ -15,6 +15,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # --- BASE DE DATOS ---
 def init_db():
+    # TIMEOUT AUMENTADO A 30 SEGUNDOS
     conn = sqlite3.connect('chat.db', timeout=30, check_same_thread=False)
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS mensajes
@@ -40,6 +41,7 @@ def validar_password_fuerte(password):
     return True
 
 def guardar_mensaje_db(sender, recipient, message, timestamp, is_group):
+    # TIMEOUT AUMENTADO
     conn = sqlite3.connect('chat.db', timeout=30, check_same_thread=False)
     c = conn.cursor()
     c.execute("INSERT INTO mensajes (sender, recipient, message, timestamp, is_group) VALUES (?, ?, ?, ?, ?)", 
@@ -50,6 +52,7 @@ def guardar_mensaje_db(sender, recipient, message, timestamp, is_group):
     return nuevo_id
 
 def borrar_mensaje_db(msg_id, sender):
+    # TIMEOUT AUMENTADO
     conn = sqlite3.connect('chat.db', timeout=30, check_same_thread=False)
     c = conn.cursor()
     c.execute("DELETE FROM mensajes WHERE id = ? AND sender = ?", (msg_id, sender))
@@ -59,6 +62,7 @@ def borrar_mensaje_db(msg_id, sender):
     return borrados > 0
 
 def obtener_mensajes_db():
+    # TIMEOUT AUMENTADO
     conn = sqlite3.connect('chat.db', timeout=30, check_same_thread=False)
     c = conn.cursor()
     c.execute("SELECT id, sender, recipient, message, timestamp, is_group FROM mensajes")
@@ -67,6 +71,7 @@ def obtener_mensajes_db():
     return [{"id": m[0], "sender": m[1], "recipient": m[2], "message": m[3], "timestamp": m[4], "is_group": bool(m[5])} for m in mensajes]
 
 def obtener_usuarios_db():
+    # TIMEOUT AUMENTADO
     conn = sqlite3.connect('chat.db', timeout=30, check_same_thread=False)
     c = conn.cursor()
     c.execute("SELECT username, avatar, about FROM usuarios")
@@ -75,6 +80,7 @@ def obtener_usuarios_db():
     return [{"username": u[0], "avatar": u[1] if u[1] else "", "about": u[2] if u[2] else "¡Hola! Uso TecChat"} for u in users]
 
 def actualizar_avatar_db(username, nueva_url):
+    # TIMEOUT AUMENTADO
     conn = sqlite3.connect('chat.db', timeout=30, check_same_thread=False)
     c = conn.cursor()
     c.execute("UPDATE usuarios SET avatar = ? WHERE username = ?", (nueva_url, username))
@@ -82,6 +88,7 @@ def actualizar_avatar_db(username, nueva_url):
     conn.close()
 
 def actualizar_about_db(username, nuevo_about):
+    # TIMEOUT AUMENTADO
     conn = sqlite3.connect('chat.db', timeout=30, check_same_thread=False)
     c = conn.cursor()
     c.execute("UPDATE usuarios SET about = ? WHERE username = ?", (nuevo_about, username))
@@ -89,6 +96,7 @@ def actualizar_about_db(username, nuevo_about):
     conn.close()
 
 def crear_grupo_db(nombre, creador, miembros_lista):
+    # TIMEOUT AUMENTADO
     conn = sqlite3.connect('chat.db', timeout=30, check_same_thread=False)
     c = conn.cursor()
     miembros_json = json.dumps(miembros_lista)
@@ -102,6 +110,7 @@ def crear_grupo_db(nombre, creador, miembros_lista):
         conn.close()
 
 def obtener_info_grupo_db(nombre_grupo):
+    # TIMEOUT AUMENTADO
     conn = sqlite3.connect('chat.db', timeout=30, check_same_thread=False)
     c = conn.cursor()
     c.execute("SELECT creador, miembros FROM grupos WHERE nombre = ?", (nombre_grupo,))
@@ -112,6 +121,7 @@ def obtener_info_grupo_db(nombre_grupo):
     return None
 
 def modificar_miembros_grupo_db(nombre_grupo, nueva_lista):
+    # TIMEOUT AUMENTADO
     conn = sqlite3.connect('chat.db', timeout=30, check_same_thread=False)
     c = conn.cursor()
     miembros_json = json.dumps(nueva_lista)
@@ -120,6 +130,7 @@ def modificar_miembros_grupo_db(nombre_grupo, nueva_lista):
     conn.close()
 
 def obtener_grupos_usuario(username):
+    # TIMEOUT AUMENTADO
     conn = sqlite3.connect('chat.db', timeout=30, check_same_thread=False)
     c = conn.cursor()
     c.execute("SELECT nombre, miembros FROM grupos")
@@ -159,7 +170,6 @@ class ConnectionManager:
     async def connect(self, websocket: WebSocket, client_id: str):
         await websocket.accept()
         self.active_connections[client_id] = websocket
-        # Al conectar, avisamos a todos que actualicen su lista y su estado
         await self.broadcast_refresh() 
         await self.broadcast_online_list()
 
@@ -173,7 +183,6 @@ class ConnectionManager:
         for conn in self.active_connections.values():
             await conn.send_text(msg)
 
-    # NUEVO: AVISAR QUE REFRESQUEN LISTA
     async def broadcast_refresh(self):
         msg = json.dumps({"type": "REFRESH_USERS"})
         for conn in self.active_connections.values():
@@ -202,6 +211,7 @@ async def get():
 
 @app.post("/login")
 async def login(user: UserAuth):
+    # TIMEOUT AUMENTADO
     conn = sqlite3.connect('chat.db', timeout=30, check_same_thread=False)
     c = conn.cursor()
     c.execute("SELECT password_hash FROM usuarios WHERE username = ?", (user.username,))
@@ -216,6 +226,7 @@ async def signup(user: UserAuth):
     val = validar_password_fuerte(user.password)
     if val != True: raise HTTPException(status_code=400, detail=val)
 
+    # TIMEOUT AUMENTADO
     conn = sqlite3.connect('chat.db', timeout=30, check_same_thread=False)
     c = conn.cursor()
     c.execute("SELECT username FROM usuarios WHERE username = ?", (user.username,))
@@ -324,10 +335,8 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
             
     except WebSocketDisconnect:
         manager.disconnect(client_id)
-        # AL SALIR, TAMBIÉN ACTUALIZAMOS LISTAS Y ESTADO
         await manager.broadcast_refresh()
         await manager.broadcast_online_list()
-        
         now = datetime.utcnow().isoformat() + "Z"
         sys_msg = json.dumps({"type": "CHAT", "sender": "Sistema", "recipient": "Todos", "message": f"{client_id} ha salido", "timestamp": now})
         await manager.broadcast(sys_msg)
