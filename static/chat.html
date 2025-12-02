@@ -2,21 +2,65 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TecChat - Final Móvil</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TecChat</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
+        /* --- RESET BÁSICO --- */
+        * { box-sizing: border-box; } 
+
         /* --- ESTILOS VISUALES --- */
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; height: 100vh; overflow: hidden; background-color: #fff; }
-        .app-container { display: flex; width: 100%; height: 100vh; max-width: none; margin: 0; background: #fff; }
+        body { 
+            margin: 0; 
+            font-family: 'Segoe UI', sans-serif; 
+            background-color: #fff;
+            position: fixed; 
+            width: 100%;
+            height: 100%; 
+            height: 100dvh; 
+            overflow: hidden;
+        }
         
-        .sidebar { width: 300px; min-width: 250px; border-right: 1px solid #eee; display: flex; flex-direction: column; background-color: #f9f9f9; }
-        .sidebar-header { padding: 15px; background: #fff; border-bottom: 3px solid #ffd700; display: flex; justify-content: space-between; align-items: center; height: 60px; }
-        .search-box { padding: 10px; border-bottom: 1px solid #eee; }
-        .search-input { width: 90%; padding: 8px; border-radius: 20px; border: 2px solid #eee; outline: none; }
+        .app-container { 
+            display: flex; 
+            width: 100%; 
+            height: 100%; 
+            background: #fff; 
+        }
+        
+        /* SIDEBAR */
+        .sidebar { 
+            width: 300px; 
+            min-width: 250px; 
+            border-right: 1px solid #eee; 
+            display: flex; 
+            flex-direction: column; 
+            background-color: #f9f9f9; 
+        }
+        
+        .sidebar-header { 
+            padding: 15px; 
+            background: #fff; 
+            border-bottom: 3px solid #ffd700; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            height: 60px; 
+            flex-shrink: 0; 
+        }
+        
+        .search-box { padding: 10px; border-bottom: 1px solid #eee; flex-shrink: 0; }
+        .search-input { width: 100%; padding: 8px; border-radius: 20px; border: 2px solid #eee; outline: none; }
         .search-input:focus { border-color: #ffd700; } 
-        .contact-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+        
+        .contact-list { 
+            flex: 1; 
+            overflow-y: auto; 
+            display: flex; 
+            flex-direction: column; 
+            -webkit-overflow-scrolling: touch; 
+        }
         
         .contact { display: flex; align-items: center; padding: 15px; cursor: pointer; border-bottom: 1px solid #f0f0f0; order: 1; position: relative; }
         .contact:hover { background-color: #fff9c4; } 
@@ -24,10 +68,9 @@
         
         .user-avatar { 
             width: 45px; height: 45px; background: #eee; border-radius: 50%; margin-right: 15px; 
-            overflow: visible; /* IMPORTANTE: Para que el puntito verde se vea fuera */
-            display: flex; align-items: center; justify-content: center; border: 2px solid transparent; position: relative;
+            overflow: visible; display: flex; align-items: center; justify-content: center; border: 2px solid transparent; position: relative; flex-shrink: 0;
         }
-        .user-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; } /* Borde redondeado a la imagen */
+        .user-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
         .user-avatar i { font-size: 20px; color: #555; }
         .active-avatar { border-color: #ffd700; }
 
@@ -36,13 +79,13 @@
             border-radius: 50%; width: 20px; height: 20px; font-size: 10px; display: flex;
             align-items: center; justify-content: center; cursor: pointer; z-index: 20; border: 1px solid white;
         }
-        
+        .change-avatar-btn:hover { transform: scale(1.1); }
+
         .logout-btn {
             color: #ff4444; cursor: pointer; font-size: 18px; margin-left: 10px;
             padding: 5px; transition: transform 0.2s;
         }
-
-        /* PUNTITO VERDE (Versión Escritorio) */
+        
         .status-dot { height: 10px; width: 10px; background-color: #ccc; border-radius: 50%; display: inline-block; margin-left: 8px; transition: background-color 0.3s; }
         .is-online { background-color: #25d366; box-shadow: 0 0 5px #25d366; }
 
@@ -51,17 +94,47 @@
             padding: 2px 6px; border-radius: 10px; margin-left: auto; display: none; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
 
-        .chat-area { flex: 1; display: flex; flex-direction: column; background: #e5e5e5; background-image: radial-gradient(#ccc 1px, transparent 1px); background-size: 20px 20px; }
-        .chat-header { padding: 0 20px; height: 60px; background: #fff; border-bottom: 1px solid #ddd; display: flex; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); z-index: 10; }
-        .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        /* CHAT AREA */
+        .chat-area { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            background: #e5e5e5; 
+            background-image: radial-gradient(#ccc 1px, transparent 1px); 
+            background-size: 20px 20px;
+            position: relative;
+            overflow: hidden; 
+        }
         
-        .message { max-width: 70%; padding: 10px 15px; border-radius: 10px; font-size: 15px; box-shadow: 0 1px 1px rgba(0,0,0,0.1); word-wrap: break-word; position: relative;}
+        .chat-header { 
+            padding: 0 15px; 
+            height: 60px; 
+            background: #fff; 
+            border-bottom: 1px solid #ddd; 
+            display: flex; 
+            align-items: center; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+            z-index: 10;
+            flex-shrink: 0;
+        }
+        
+        .chat-messages { 
+            flex: 1; 
+            padding: 15px; 
+            overflow-y: auto; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px; 
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .message { max-width: 85%; padding: 10px 15px; border-radius: 10px; font-size: 15px; box-shadow: 0 1px 1px rgba(0,0,0,0.1); word-wrap: break-word; position: relative;}
         .message.sent { align-self: flex-end; background: #ffd700; color: #000; border-top-right-radius: 0; }
         .message.received { align-self: flex-start; background: white; color: #333; border-top-left-radius: 0; }
-        .system-msg { align-self: center; background: #eee; font-size: 12px; color: #666; border-radius: 20px; padding: 5px 15px; }
+        .system-msg { align-self: center; background: #eee; font-size: 12px; color: #666; border-radius: 20px; padding: 5px 15px; text-align: center;}
 
         .msg-image { max-width: 100%; border-radius: 10px; margin-top: 5px; cursor: pointer; transition: transform 0.2s;}
-        .msg-image:hover { transform: scale(1.02); }
+        
         .msg-time { display: block; font-size: 11px; margin-top: 4px; text-align: right; opacity: 0.7; }
 
         .delete-btn {
@@ -71,47 +144,57 @@
         }
         .message.sent:hover .delete-btn { display: flex; }
 
-        .chat-input-area { padding: 15px; background: #fff; display: flex; gap: 10px; align-items: center; }
-        .chat-input-area input[type="text"] { flex: 1; padding: 12px; border-radius: 25px; border: 2px solid #ddd; outline: none; }
+        /* INPUT AREA */
+        .chat-input-area { 
+            padding: 10px; 
+            background: #fff; 
+            display: flex; 
+            gap: 10px; 
+            align-items: center; 
+            border-top: 1px solid #ddd;
+            flex-shrink: 0; 
+            padding-bottom: max(10px, env(safe-area-inset-bottom)); 
+        }
+        
+        .chat-input-area input[type="text"] { 
+            flex: 1; 
+            padding: 12px; 
+            border-radius: 25px; 
+            border: 2px solid #ddd; 
+            outline: none; 
+            font-size: 16px; 
+        }
         .chat-input-area input[type="text"]:focus { border-color: #ffd700; }
-        .circle-btn { background: #ffd700; color: #000; border: none; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        
+        .circle-btn { background: #ffd700; color: #000; border: none; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .clip-btn { background: #f0f0f0; color: #555; margin-right: 5px;}
 
-        /* --- DISEÑO MÓVIL OPTIMIZADO --- */
+        /* --- DISEÑO MÓVIL --- */
         @media (max-width: 768px) {
-            .sidebar { width: 85px; min-width: 85px; } /* Un poco más ancha para que quepa todo */
-            .contact-info, .search-box, .sidebar-header span { display: none; } /* Ocultamos textos */
+            .sidebar { width: 80px; min-width: 80px; } 
+            .contact-info, .search-box, .sidebar-header span { display: none; } 
             
-            /* Ajustamos la cabecera lateral */
             .sidebar-header { 
                 flex-direction: column; 
                 height: auto; 
                 padding: 15px 0; 
                 gap: 15px; 
             }
-            .logout-btn { margin-left: 0; font-size: 20px; } /* Botón salir centrado abajo del avatar */
+            .logout-btn { margin-left: 0; font-size: 20px; } 
             
             .user-avatar { margin-right: 0; }
             .contact { justify-content: center; padding: 15px 0; }
-            
-            /* Badge rojo flotante en móvil */
             .unread-badge { position: absolute; top: 5px; right: 5px; display: none; }
 
-            /* --- TRUCO DEL PUNTITO EN MÓVIL --- */
-            /* Cuando la clase 'user-online' está presente en el contacto, mostramos un puntito SOBRE el avatar */
             .contact-user.user-online .user-avatar::after {
                 content: '';
-                position: absolute;
-                bottom: 0;
-                right: 0;
-                width: 12px;
-                height: 12px;
-                background-color: #25d366; /* Verde */
-                border: 2px solid white;
-                border-radius: 50%;
-                z-index: 10;
-                display: block;
+                position: absolute; bottom: 0; right: 0;
+                width: 12px; height: 12px;
+                background-color: #25d366; border: 2px solid white;
+                border-radius: 50%; z-index: 10; display: block;
             }
+            
+            .message.sent .delete-btn { display: flex; opacity: 0.8; }
         }
     </style>
 </head>
@@ -297,7 +380,6 @@
             }
         }
 
-        // --- FUNCIÓN MEJORADA PARA DETECTAR ONLINE EN MÓVIL ---
         function actualizarEstadoUsuarios(listaOnline) {
             const contactosDivs = document.querySelectorAll(".contact-user");
             contactosDivs.forEach(div => {
@@ -305,15 +387,12 @@
                 const puntito = div.querySelector(".status-dot");
                 
                 if (listaOnline.includes(nombreUsuario)) {
-                    // Agregamos clase especial al contenedor principal
                     div.classList.add("user-online");
-                    
                     puntito.classList.add("is-online");
                     div.querySelector(".estado-texto").innerText = "En línea";
                     div.querySelector(".estado-texto").style.color = "#25d366";
                 } else {
                     div.classList.remove("user-online");
-                    
                     puntito.classList.remove("is-online");
                     div.querySelector(".estado-texto").innerText = "Desconectado";
                     div.querySelector(".estado-texto").style.color = "#aaa";
@@ -400,7 +479,6 @@
             if (e.key === "Enter") sendMessage();
         });
 
-        // --- COMPRESIÓN DE IMÁGENES ---
         document.getElementById('image-input').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
