@@ -7,22 +7,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* --- RESET Y BASICS --- */
         * { box-sizing: border-box; }
         body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: #fff; position: fixed; width: 100%; height: 100dvh; overflow: hidden; }
         .app-container { display: flex; width: 100%; height: 100%; background: #fff; }
         
-        /* --- SIDEBAR (LISTA DE CONTACTOS) --- */
-        .sidebar { 
-            width: 350px; 
-            min-width: 300px; 
-            border-right: 1px solid #eee; 
-            display: flex; 
-            flex-direction: column; 
-            background-color: #fff; 
-            z-index: 20; /* Para que quede encima en movil si es necesario */
-        }
-        
+        /* --- SIDEBAR --- */
+        .sidebar { width: 350px; min-width: 300px; border-right: 1px solid #eee; display: flex; flex-direction: column; background-color: #fff; z-index: 20; }
         .sidebar-header { padding: 15px; background: #fff; border-bottom: 3px solid #ffd700; display: flex; justify-content: space-between; align-items: center; height: 60px; flex-shrink: 0; }
         
         .my-profile-info { display: flex; flex-direction: column; margin-left: 10px; }
@@ -35,39 +25,58 @@
         
         .contact-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; -webkit-overflow-scrolling: touch; }
         
-        /* ESTILO DE CONTACTO (ESTILO WHATSAPP) */
-        .contact { display: flex; align-items: center; padding: 15px; cursor: pointer; border-bottom: 1px solid #f0f0f0; order: 1; position: relative; }
+        /* --- CONTACTO (Estructura Fija) --- */
+        .contact { display: flex; align-items: center; padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #f0f0f0; height: 75px; }
         .contact:hover { background-color: #f5f5f5; } 
         .contact.active-chat { background-color: #ffe082; } 
         
-        .user-avatar { width: 50px; height: 50px; background: #eee; border-radius: 50%; margin-right: 15px; overflow: visible; display: flex; align-items: center; justify-content: center; border: 2px solid transparent; position: relative; flex-shrink: 0; }
+        .user-avatar { width: 50px; height: 50px; background: #eee; border-radius: 50%; margin-right: 15px; overflow: visible; display: flex; align-items: center; justify-content: center; border: 2px solid transparent; flex-shrink: 0; position: relative; }
         .user-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
         .user-avatar i { font-size: 24px; color: #555; }
         .active-avatar { border-color: #ffd700; }
 
-        .contact-info { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-        .contact-name { font-weight: 600; font-size: 15px; margin-bottom: 3px; display: flex; align-items: center; justify-content: space-between; }
-        .contact-last-msg { font-size: 13px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+        /* Estructura Interna del Contacto (Grid Flex) */
+        .contact-info { flex: 1; display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
+        
+        /* Fila Superior: Nombre + Puntito ---espacio--- Contador */
+        .contact-row-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+        .name-wrapper { display: flex; align-items: center; font-weight: 600; font-size: 16px; color: #000; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+        
+        /* Fila Inferior: Mensaje o Estado */
+        .contact-row-bottom { display: flex; align-items: center; font-size: 13px; color: #666; height: 18px; overflow: hidden; }
+        .status-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
+
+        /* ELEMENTOS VISUALES */
+        .status-dot { 
+            height: 10px; width: 10px; 
+            background-color: #ccc; /* Gris por defecto */
+            border-radius: 50%; 
+            display: inline-block; 
+            margin-left: 8px; /* Separado del nombre */
+            flex-shrink: 0;
+            transition: background-color 0.3s; 
+        }
+        .is-online { background-color: #25d366; box-shadow: 0 0 4px #25d366; }
+
+        .unread-badge { 
+            background-color: #ff3b30; color: white; 
+            font-size: 11px; font-weight: bold; 
+            padding: 2px 7px; border-radius: 12px; 
+            display: none; /* Oculto si es 0 */
+            margin-left: 10px; 
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
 
         .change-avatar-btn { position: absolute; bottom: -2px; right: -2px; background: #000; color: #ffd700; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 20; border: 1px solid white; }
         .logout-btn { color: #ff4444; cursor: pointer; font-size: 18px; margin-left: 10px; padding: 5px; }
         .add-group-btn { background: #ffd700; border: none; width: 35px; height: 35px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        
-        .status-dot { height: 10px; width: 10px; background-color: #ccc; border-radius: 50%; display: inline-block; margin-left: 5px; transition: background-color 0.3s; }
-        .is-online { background-color: #25d366; box-shadow: 0 0 5px #25d366; }
-        
-        /* Badge rojo */
-        .unread-badge { background-color: #ff3b30; color: white; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 10px; display: none; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
 
         /* --- CHAT AREA --- */
         .chat-area { flex: 1; display: flex; flex-direction: column; background: #e5e5e5; background-image: radial-gradient(#ccc 1px, transparent 1px); background-size: 20px 20px; position: relative; overflow: hidden; }
-        
         .chat-header { padding: 0 15px; height: 60px; background: #fff; border-bottom: 1px solid #ddd; display: flex; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); z-index: 10; flex-shrink: 0; cursor: pointer; }
-        
-        /* BOTÓN ATRÁS (Solo visible en móvil) */
         .back-btn { display: none; margin-right: 15px; font-size: 20px; color: #555; cursor: pointer; }
-
         .chat-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; -webkit-overflow-scrolling: touch; }
+        
         .message { max-width: 85%; padding: 10px 15px; border-radius: 10px; font-size: 15px; box-shadow: 0 1px 1px rgba(0,0,0,0.1); word-wrap: break-word; position: relative;}
         .message.sent { align-self: flex-end; background: #ffd700; color: #000; border-top-right-radius: 0; }
         .message.received { align-self: flex-start; background: white; color: #333; border-top-left-radius: 0; }
@@ -97,29 +106,13 @@
         .btn-cancel { background: #ddd; }
         .btn-create { background: #ffd700; color: black; font-weight: bold; }
 
-        /* --- DISEÑO MÓVIL ESTILO APP --- */
+        /* --- DISEÑO MÓVIL APP --- */
         @media (max-width: 768px) {
-            /* 1. La Sidebar ocupa TODO el ancho inicialmente */
-            .sidebar { 
-                width: 100%; 
-                display: flex; /* Visible al inicio */
-            }
-            
-            /* 2. El Chat Area está OCULTO inicialmente */
-            .chat-area { 
-                display: none; /* Oculto */
-                width: 100%;
-            }
-
-            /* Clases para alternar vistas con JS */
+            .sidebar { width: 100%; display: flex; }
+            .chat-area { display: none; width: 100%; }
             body.chat-active .sidebar { display: none; }
             body.chat-active .chat-area { display: flex; }
-
-            /* 3. Mostrar botón atrás */
             .back-btn { display: block; }
-
-            /* Ajustes estéticos */
-            .contact-last-msg { max-width: 70vw; } /* Más espacio para texto */
             .message.sent .delete-btn { display: flex; opacity: 0.8; }
         }
     </style>
@@ -158,7 +151,6 @@
         <div class="chat-area">
             <div class="chat-header">
                 <i class="fas fa-arrow-left back-btn" onclick="volverALista()"></i>
-
                 <div class="user-avatar active-avatar" id="header-avatar" onclick="verInfoChatActual()">
                     <i class="fas fa-users"></i>
                 </div>
@@ -224,20 +216,14 @@
         }
 
         // --- NAVEGACIÓN MÓVIL ---
-        function irAChat() {
-            // Agrega clase al body para ocultar lista y mostrar chat
-            document.body.classList.add("chat-active");
-        }
-
+        function irAChat() { document.body.classList.add("chat-active"); }
         function volverALista() {
-            // Quita clase para mostrar lista y ocultar chat
             document.body.classList.remove("chat-active");
-            // Limpia chat actual
             chatActual = ""; 
             actualizarClaseActiva();
         }
 
-        let chatActual = ""; // Empezamos sin chat seleccionado en movil
+        let chatActual = "";
         let esGrupoActual = false;
         let todosLosMensajes = []; 
         let contadoresNoLeidos = {}; 
@@ -359,14 +345,24 @@
                 if(div.classList.contains('is-group')) return;
                 const nombre = div.getAttribute("data-name");
                 const puntito = div.querySelector(".status-dot");
+                const textoEstado = div.querySelector(".status-text"); // NUEVO SELECTOR
+                
                 if (listaOnline.includes(nombre)) {
-                    div.classList.add("user-online");
-                    if(puntito) puntito.classList.add("is-online");
-                    const txt=div.querySelector(".estado-texto"); if(txt) {txt.innerText="En línea"; txt.style.color="#25d366";}
+                    puntito.classList.add("is-online");
+                    if (textoEstado) {
+                        textoEstado.innerText = "En línea";
+                        textoEstado.style.color = "#25d366";
+                        textoEstado.style.fontWeight = "bold";
+                    }
                 } else {
-                    div.classList.remove("user-online");
-                    if(puntito) puntito.classList.remove("is-online");
-                    const txt=div.querySelector(".estado-texto"); if(txt) {txt.innerText="Desconectado"; txt.style.color="#aaa";}
+                    puntito.classList.remove("is-online");
+                    if (textoEstado) {
+                        // Restauramos el texto original (about) que estaba en data-about
+                        const originalAbout = div.getAttribute("data-about") || "Desconectado";
+                        textoEstado.innerText = originalAbout;
+                        textoEstado.style.color = "#666";
+                        textoEstado.style.fontWeight = "normal";
+                    }
                 }
             });
         }
@@ -374,10 +370,7 @@
         function cambiarChat(nuevo, avatar, esGrupo=false) {
             chatActual=nuevo; esGrupoActual=esGrupo; limpiarBadge(chatActual);
             
-            // MODO MÓVIL: Transición
-            if (window.innerWidth <= 768) {
-                irAChat(); // Cambia de pantalla
-            }
+            if (window.innerWidth <= 768) irAChat();
 
             document.getElementById("titulo-chat").innerText=chatActual;
             document.getElementById("subtitulo-chat").innerText = esGrupo ? "Toca para ver miembros" : "En línea";
@@ -385,7 +378,6 @@
             if(chatActual==="Chat General") { head.innerHTML=`<i class="fas fa-users"></i>`; }
             else if(esGrupo) { head.innerHTML=`<i class="fas fa-user-friends"></i>`; head.style.backgroundColor="#e1bee7"; }
             else { head.innerHTML=`<img src="${avatar}" alt="${chatActual}">`; head.style.backgroundColor="#eee"; }
-            
             document.getElementById("chat-box").innerHTML="";
             todosLosMensajes.forEach(msg=>renderizarMensaje(msg));
             document.querySelectorAll('.contact').forEach(el=>el.classList.remove('active-chat'));
@@ -444,7 +436,6 @@
             }; r.readAsDataURL(f); e.target.value='';
         });
 
-        // --- FILTRO Y MODALES ---
         function filtrarContactos() {
             const fil=document.getElementById('input-busqueda').value.toUpperCase();
             const list=document.getElementById("lista-contactos").children;
@@ -476,7 +467,16 @@
             const resG=await fetch(`/mis-grupos/${username}`); const misGrupos=await resG.json();
             
             const cont=document.getElementById("lista-contactos");
-            cont.innerHTML=`<div class="contact active-chat" id="contact-general" data-name="Chat General" onclick="cambiarChat('Chat General','',false)"><div class="user-avatar active-avatar"><i class="fas fa-users"></i></div><div class="contact-info"><div class="contact-name">Chat General <span class="unread-badge"></span></div><div class="contact-last-msg">Sala pública</div></div></div>`;
+            cont.innerHTML=`<div class="contact active-chat" id="contact-general" data-name="Chat General" onclick="cambiarChat('Chat General','',false)">
+                <div class="user-avatar active-avatar"><i class="fas fa-users" style="color:#555;"></i></div>
+                <div class="contact-info">
+                    <div class="contact-row-top">
+                        <div class="name-wrapper">Chat General</div>
+                        <span class="unread-badge"></span>
+                    </div>
+                    <div class="contact-row-bottom"><span class="status-text">Sala pública</span></div>
+                </div>
+            </div>`;
             
             const yo = todosLosUsuarios.find(u=>u.username===username);
             if(yo) {
@@ -487,26 +487,55 @@
             }
 
             misGrupos.forEach(g=>{
-                cont.innerHTML+=`<div class="contact is-group" data-name="${g.nombre}" onclick="cambiarChat('${g.nombre}','',true)"><div class="user-avatar" style="background-color:#e1bee7;"><i class="fas fa-user-friends" style="color:#6a1b9a;"></i></div><div class="contact-info"><div class="contact-name">${g.nombre} <span class="unread-badge"></span></div><div class="contact-last-msg">Grupo</div></div></div>`;
+                cont.innerHTML+=`<div class="contact is-group" data-name="${g.nombre}" onclick="cambiarChat('${g.nombre}','',true)">
+                    <div class="user-avatar" style="background-color:#e1bee7;"><i class="fas fa-user-friends" style="color:#6a1b9a;"></i></div>
+                    <div class="contact-info">
+                        <div class="contact-row-top"><div class="name-wrapper">${g.nombre}</div><span class="unread-badge"></span></div>
+                        <div class="contact-row-bottom"><span class="status-text">Grupo</span></div>
+                    </div>
+                </div>`;
             });
 
             todosLosUsuarios.forEach(u=>{
                 if(u.username!==username) {
                     const av=u.avatar?u.avatar:generarUrlAvatar(u.username);
                     const st=u.about?u.about:"Desconectado";
-                    cont.innerHTML+=`<div class="contact contact-user" data-name="${u.username}" onclick="cambiarChat('${u.username}','${av}',false)"><div class="user-avatar"><img src="${av}" alt="${u.username}"></div><div class="contact-info"><div class="contact-name">${u.username} <span class="status-dot"></span><span class="unread-badge"></span></div><div class="contact-last-msg estado-texto">${st}</div></div></div>`;
+                    cont.innerHTML+=`<div class="contact contact-user" data-name="${u.username}" data-about="${st}" onclick="cambiarChat('${u.username}','${av}',false)">
+                        <div class="user-avatar"><img src="${av}" alt="${u.username}"></div>
+                        <div class="contact-info">
+                            <div class="contact-row-top">
+                                <div class="name-wrapper">
+                                    ${u.username} 
+                                    <span class="status-dot"></span>
+                                </div>
+                                <span class="unread-badge"></span>
+                            </div>
+                            <div class="contact-row-bottom">
+                                <span class="status-text">${st}</span>
+                            </div>
+                        </div>
+                    </div>`;
                 }
             });
 
             const resH=await fetch("/historial"); const hist=await resH.json();
             todosLosMensajes=hist; 
             
-            // Si es escritorio, cargamos el chat general al inicio
             if(window.innerWidth > 768) {
                 hist.forEach(msg=>renderizarMensaje(msg));
             } else {
-                // Si es movil, no renderizamos mensajes hasta que elija uno
                 chatActual = "";
+            }
+        }
+
+        function actualizarClaseActiva() {
+            document.querySelectorAll('.contact').forEach(el => el.classList.remove('active-chat'));
+            if (chatActual === "Chat General") {
+                const gen = document.getElementById('contact-general');
+                if(gen) gen.classList.add('active-chat');
+            } else {
+                const item = document.querySelector(`.contact[data-name="${chatActual}"]`);
+                if (item) item.classList.add('active-chat');
             }
         }
 
