@@ -1,6 +1,7 @@
 import sqlite3
 import json
 import hashlib
+import re  # <--- IMPORTANTE: Para validar contraseñas
 from datetime import datetime
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -16,13 +17,10 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 def init_db():
     conn = sqlite3.connect('chat.db', timeout=30, check_same_thread=False)
     c = conn.cursor()
-    # Mensajes
     c.execute('''CREATE TABLE IF NOT EXISTS mensajes
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, sender TEXT, recipient TEXT, message TEXT, timestamp TEXT, is_group INTEGER)''')
-    # Usuarios
     c.execute('''CREATE TABLE IF NOT EXISTS usuarios
                  (username TEXT PRIMARY KEY, password_hash TEXT, avatar TEXT, about TEXT)''')
-    # Grupos
     c.execute('''CREATE TABLE IF NOT EXISTS grupos
                  (nombre TEXT PRIMARY KEY, creador TEXT, miembros TEXT)''')
     conn.commit()
@@ -30,10 +28,23 @@ def init_db():
 
 init_db()
 
-# --- FUNCIONES BASE DE DATOS ---
+# --- FUNCIONES ---
 def encriptar(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
+def validar_password_fuerte(password):
+    """Retorna True si es fuerte, o el mensaje de error si no."""
+    if len(password) < 8:
+        return "Mínimo 8 caracteres."
+    if not re.search(r"[A-Z]", password):
+        return "Falta una mayúscula."
+    if not re.search(r"[a-z]", password):
+        return "Falta una minúscula."
+    if not re.search(r"\d", password):
+        return "Falta un número."
+    return True
+
+# (El resto de funciones de DB siguen igual...)
 def guardar_mensaje_db(sender, recipient, message, timestamp, is_group):
     conn = sqlite3.connect('chat.db', timeout=30, check_same_thread=False)
     c = conn.cursor()
@@ -83,7 +94,6 @@ def actualizar_about_db(username, nuevo_about):
     conn.commit()
     conn.close()
 
-# --- FUNCIONES DE GRUPOS ---
 def crear_grupo_db(nombre, creador, miembros_lista):
     conn = sqlite3.connect('chat.db', timeout=30, check_same_thread=False)
     c = conn.cursor()
@@ -148,7 +158,6 @@ class GroupAction(BaseModel):
     solicitante: str
     target_user: str
 
-# --- WEBSOCKET MANAGER ---
 class ConnectionManager:
     def __init__(self):
         self.active_connections: Dict[str, WebSocket] = {}
@@ -202,13 +211,19 @@ async def login(user: UserAuth):
 
 @app.post("/signup")
 async def signup(user: UserAuth):
-    if not user.password: raise HTTPException(status_code=400, detail="Contraseña obligatoria")
+    # --- VALIDACIÓN DE CONTRASEÑA ---
+    validacion = validar_password_fuerte(user.password)
+    if validacion != True:
+        # Si no es fuerte, devolvemos error 400 con la razón
+        raise HTTPException(status_code=400, detail=validacion)
+
     conn = sqlite3.connect('chat.db', timeout=30, check_same_thread=False)
     c = conn.cursor()
     c.execute("SELECT username FROM usuarios WHERE username = ?", (user.username,))
     if c.fetchone():
         conn.close()
-        raise HTTPException(status_code=400, detail="Usuario existente.")
+        raise HTTPException(status_code=400, detail="El usuario ya existe.")
+    
     c.execute("INSERT INTO usuarios VALUES (?, ?, ?, ?)", (user.username, encriptar(user.password), None, "Disponible"))
     conn.commit()
     conn.close()
@@ -273,9 +288,7 @@ async def get_history():
 async def websocket_endpoint(websocket: WebSocket, client_id: str):
     await manager.connect(websocket, client_id)
     try:
-        # --- AQUÍ ESTÁ EL CAMBIO CLAVE: HORA UTC (Z) ---
         now = datetime.utcnow().isoformat() + "Z"
-        
         sys_msg = json.dumps({"type": "CHAT", "sender": "Sistema", "recipient": "Todos", "message": f"{client_id} se ha unido", "timestamp": now, "is_group": False})
         await manager.broadcast(sys_msg)
         
@@ -293,12 +306,9 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 recipient = data_json["recipient"]
                 message = data_json["message"]
                 is_group = data_json.get("is_group", False)
-                
-                # --- AQUÍ ESTÁ EL CAMBIO CLAVE: HORA UTC (Z) ---
                 hora_actual = datetime.utcnow().isoformat() + "Z"
                 
                 nuevo_id = guardar_mensaje_db(client_id, recipient, message, hora_actual, is_group)
-                
                 resp = json.dumps({
                     "type": "CHAT", "id": nuevo_id, "sender": client_id,
                     "recipient": recipient, "message": message, "timestamp": hora_actual, "is_group": is_group
@@ -317,3 +327,6 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
     except WebSocketDisconnect:
         manager.disconnect(client_id)
         await manager.broadcast_online_list()
+        now = datetime.utcnow().isoformat() + "Z"
+        sys_msg = json.dumps({"type": "CHAT", "sender": "Sistema", "recipient": "Todos", "message": f"{client_id} ha salido", "timestamp": now})
+        await manager.broadcast(sys_msg)
