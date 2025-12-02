@@ -143,7 +143,6 @@
             .back-btn { display: block; }
             .message.sent .delete-btn { display: flex; opacity: 0.8; }
             
-            /* OCULTAR ELEMENTOS INNECESARIOS EN MÓVIL PARA LIMPIEZA */
             .my-profile-info, .sidebar-header span { display: none; }
             .sidebar-header { justify-content: space-between; }
             .logout-btn { margin-left: 0; }
@@ -246,7 +245,6 @@
         if (!username) { window.location.href = "/"; }
         document.getElementById("mi-nombre-display").innerText = username;
 
-        // --- MODO OSCURO ---
         function toggleDarkMode() {
             document.body.classList.toggle("dark-mode");
             const isDark = document.body.classList.contains("dark-mode");
@@ -260,6 +258,7 @@
             document.getElementById("theme-icon").className = "fas fa-sun icon-btn";
         }
 
+        function closing() {}
         function cerrarSesion() {
             if(confirm("¿Cerrar sesión?")) {
                 localStorage.removeItem("tecchat_usuario");
@@ -376,8 +375,6 @@
                 todosLosMensajes.push(data);
                 renderizarMensaje(data);
                 manejarNotificacion(data);
-                
-                // SONIDO
                 if (data.sender !== username && data.sender !== "Sistema") {
                     try {
                         const audio = document.getElementById("notification-sound");
@@ -424,7 +421,9 @@
         }
         function solicitarBorrado(id) { if(confirm("¿Borrar?")) socket.send(JSON.stringify({action:"delete", id:id})); }
 
+        // --- ACTUALIZA SIDEBAR Y HEADER ---
         function actualizarEstadoUsuarios(listaOnline) {
+            // 1. Sidebar
             const divs = document.querySelectorAll(".contact-user");
             divs.forEach(div => {
                 if(div.classList.contains('is-group')) return;
@@ -436,6 +435,20 @@
                     if(puntito) puntito.classList.remove("is-online");
                 }
             });
+
+            // 2. Header (Solo si es privado y no es grupo)
+            if (chatActual && !esGrupoActual && chatActual !== "Chat General") {
+                const sub = document.getElementById("subtitulo-chat");
+                if (listaOnline.includes(chatActual)) {
+                    sub.innerText = "En línea";
+                    sub.style.color = "#25d366";
+                    sub.style.fontWeight = "bold";
+                } else {
+                    sub.innerText = "Desconectado";
+                    sub.style.color = "#666";
+                    sub.style.fontWeight = "normal";
+                }
+            }
         }
 
         function cambiarChat(nuevo, avatar, esGrupo=false) {
@@ -444,7 +457,18 @@
             if (window.innerWidth <= 768) irAChat();
 
             document.getElementById("titulo-chat").innerText=chatActual;
-            document.getElementById("subtitulo-chat").innerText = esGrupo ? "Toca para ver miembros" : "En línea";
+            
+            // Texto inicial (luego se actualiza con listaOnline)
+            let textoEstado = "Desconectado";
+            if (esGrupo) textoEstado = "Toca para ver miembros";
+            else if (nuevo === "Chat General") textoEstado = "Sala pública";
+            else if (usuariosOnlineGlobal.includes(nuevo)) textoEstado = "En línea"; // Check instantáneo
+
+            const sub = document.getElementById("subtitulo-chat");
+            sub.innerText = textoEstado;
+            sub.style.color = (textoEstado === "En línea") ? "#25d366" : "#666";
+            sub.style.fontWeight = (textoEstado === "En línea") ? "bold" : "normal";
+
             const head=document.getElementById("header-avatar");
             if(chatActual==="Chat General") { head.innerHTML=`<i class="fas fa-users"></i>`; }
             else if(esGrupo) { head.innerHTML=`<i class="fas fa-user-friends"></i>`; head.style.backgroundColor="#e1bee7"; }
@@ -479,7 +503,6 @@
                     if ((chatActual === "Chat General" || esGrupoActual) && data.sender !== username) inner += `<span class="msg-sender-name">${data.sender}</span>`;
                     
                     const horaBonita = formatearHoraLocal(data.timestamp);
-                    // CHECK DE ENVIADO
                     inner += content + `<span class="msg-time">${horaBonita} <i class="fas fa-check" style="margin-left:3px;"></i></span>`;
                     msgDiv.innerHTML = inner;
                 }
@@ -532,6 +555,7 @@
             cerrarModal('modal-grupo');
         }
 
+        // --- RECARGAR SIDEBAR SIN PERDER CHAT ---
         async function recargarSidebar() {
             const resU=await fetch("/lista-usuarios/"); todosLosUsuarios=await resU.json();
             const resG=await fetch(`/mis-grupos/${username}`); const misGrupos=await resG.json();
@@ -559,6 +583,7 @@
                 }
             });
 
+            // REAPLICAR ESTADOS ONLINE DESPUÉS DE RECARGAR
             if(usuariosOnlineGlobal.length > 0) actualizarEstadoUsuarios(usuariosOnlineGlobal);
             actualizarClaseActiva();
         }
