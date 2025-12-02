@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TecChat - Final</title>
+    <title>TecChat - Final Móvil</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
@@ -18,33 +18,32 @@
         .search-input:focus { border-color: #ffd700; } 
         .contact-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
         
-        .contact { display: flex; align-items: center; padding: 15px; cursor: pointer; border-bottom: 1px solid #f0f0f0; order: 1; }
+        .contact { display: flex; align-items: center; padding: 15px; cursor: pointer; border-bottom: 1px solid #f0f0f0; order: 1; position: relative; }
         .contact:hover { background-color: #fff9c4; } 
         .contact.active-chat { background-color: #ffe082; } 
         
         .user-avatar { 
             width: 45px; height: 45px; background: #eee; border-radius: 50%; margin-right: 15px; 
-            overflow: hidden; display: flex; align-items: center; justify-content: center; border: 2px solid transparent; position: relative;
+            overflow: visible; /* IMPORTANTE: Para que el puntito verde se vea fuera */
+            display: flex; align-items: center; justify-content: center; border: 2px solid transparent; position: relative;
         }
-        .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .user-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; } /* Borde redondeado a la imagen */
         .user-avatar i { font-size: 20px; color: #555; }
         .active-avatar { border-color: #ffd700; }
 
         .change-avatar-btn {
-            position: absolute; bottom: -2px; right: -2px; background: #000; color: #ffd700;
+            position: absolute; bottom: -5px; right: -5px; background: #000; color: #ffd700;
             border-radius: 50%; width: 20px; height: 20px; font-size: 10px; display: flex;
-            align-items: center; justify-content: center; cursor: pointer; z-index: 10; border: 1px solid white;
+            align-items: center; justify-content: center; cursor: pointer; z-index: 20; border: 1px solid white;
         }
-        .change-avatar-btn:hover { transform: scale(1.1); }
-
-        /* BOTÓN DE SALIR (NUEVO) */
+        
         .logout-btn {
             color: #ff4444; cursor: pointer; font-size: 18px; margin-left: 10px;
             padding: 5px; transition: transform 0.2s;
         }
-        .logout-btn:hover { transform: scale(1.2); }
-        
-        .status-dot { height: 10px; width: 10px; background-color: #ccc; border-radius: 50%; display: inline-block; margin-left: 8px; box-shadow: 0 0 2px rgba(0,0,0,0.2); transition: background-color 0.3s; }
+
+        /* PUNTITO VERDE (Versión Escritorio) */
+        .status-dot { height: 10px; width: 10px; background-color: #ccc; border-radius: 50%; display: inline-block; margin-left: 8px; transition: background-color 0.3s; }
         .is-online { background-color: #25d366; box-shadow: 0 0 5px #25d366; }
 
         .unread-badge {
@@ -75,20 +74,44 @@
         .chat-input-area { padding: 15px; background: #fff; display: flex; gap: 10px; align-items: center; }
         .chat-input-area input[type="text"] { flex: 1; padding: 12px; border-radius: 25px; border: 2px solid #ddd; outline: none; }
         .chat-input-area input[type="text"]:focus { border-color: #ffd700; }
-        
-        .circle-btn { background: #ffd700; color: #000; border: none; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
-        .circle-btn:hover { background: #e6c200; }
-        .clip-btn { background: #f0f0f0; color: #555; margin-right: 5px;} 
-        .clip-btn:hover { background: #ddd; }
+        .circle-btn { background: #ffd700; color: #000; border: none; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .clip-btn { background: #f0f0f0; color: #555; margin-right: 5px;}
 
+        /* --- DISEÑO MÓVIL OPTIMIZADO --- */
         @media (max-width: 768px) {
-            .sidebar { width: 70px; min-width: 70px; }
-            .contact-info, .search-box, .sidebar-header span { display: none; }
+            .sidebar { width: 85px; min-width: 85px; } /* Un poco más ancha para que quepa todo */
+            .contact-info, .search-box, .sidebar-header span { display: none; } /* Ocultamos textos */
+            
+            /* Ajustamos la cabecera lateral */
+            .sidebar-header { 
+                flex-direction: column; 
+                height: auto; 
+                padding: 15px 0; 
+                gap: 15px; 
+            }
+            .logout-btn { margin-left: 0; font-size: 20px; } /* Botón salir centrado abajo del avatar */
+            
             .user-avatar { margin-right: 0; }
             .contact { justify-content: center; padding: 15px 0; }
-            .sidebar-header { justify-content: center; }
-            .unread-badge { position: absolute; top: 5px; right: 5px; }
-            .logout-btn { position: absolute; top: 20px; right: 10px; } /* Ajuste movil */
+            
+            /* Badge rojo flotante en móvil */
+            .unread-badge { position: absolute; top: 5px; right: 5px; display: none; }
+
+            /* --- TRUCO DEL PUNTITO EN MÓVIL --- */
+            /* Cuando la clase 'user-online' está presente en el contacto, mostramos un puntito SOBRE el avatar */
+            .contact-user.user-online .user-avatar::after {
+                content: '';
+                position: absolute;
+                bottom: 0;
+                right: 0;
+                width: 12px;
+                height: 12px;
+                background-color: #25d366; /* Verde */
+                border: 2px solid white;
+                border-radius: 50%;
+                z-index: 10;
+                display: block;
+            }
         }
     </style>
 </head>
@@ -99,12 +122,11 @@
             <div class="sidebar-header">
                 <div style="position: relative;">
                     <div class="user-avatar" id="mi-avatar-container"></div>
-                    <div class="change-avatar-btn" onclick="cambiarMiAvatar()" title="Cambiar foto al azar">
+                    <div class="change-avatar-btn" onclick="cambiarMiAvatar()" title="Cambiar foto">
                         <i class="fas fa-sync"></i>
                     </div>
                 </div>
                 <span id="mi-nombre-display">Mi Perfil</span>
-                
                 <i class="fas fa-sign-out-alt logout-btn" onclick="cerrarSesion()" title="Cerrar Sesión"></i>
             </div>
             
@@ -129,7 +151,7 @@
 
             <div class="chat-input-area">
                 <input type="file" id="image-input" accept="image/*" style="display: none;">
-                <button class="circle-btn clip-btn" onclick="document.getElementById('image-input').click()" title="Enviar imagen">
+                <button class="circle-btn clip-btn" onclick="document.getElementById('image-input').click()">
                     <i class="fas fa-paperclip"></i>
                 </button>
                 <input type="text" id="message-input" placeholder="Escribe..." autocomplete="off">
@@ -143,11 +165,10 @@
         if (!username) { window.location.href = "/"; }
         document.getElementById("mi-nombre-display").innerText = username;
 
-        // --- FUNCIÓN CERRAR SESIÓN ---
         function cerrarSesion() {
-            if(confirm("¿Quieres cerrar sesión?")) {
-                localStorage.removeItem("tecchat_usuario"); // Borramos la memoria
-                window.location.href = "/"; // Volvemos al inicio
+            if(confirm("¿Cerrar sesión?")) {
+                localStorage.removeItem("tecchat_usuario");
+                window.location.href = "/";
             }
         }
 
@@ -270,22 +291,29 @@
         }
 
         function solicitarBorrado(id) {
-            if(confirm("¿Seguro que quieres borrar este mensaje?")) {
+            if(confirm("¿Seguro?")) {
                 const payload = { action: "delete", id: id };
                 socket.send(JSON.stringify(payload));
             }
         }
 
+        // --- FUNCIÓN MEJORADA PARA DETECTAR ONLINE EN MÓVIL ---
         function actualizarEstadoUsuarios(listaOnline) {
             const contactosDivs = document.querySelectorAll(".contact-user");
             contactosDivs.forEach(div => {
                 const nombreUsuario = div.getAttribute("data-name");
                 const puntito = div.querySelector(".status-dot");
+                
                 if (listaOnline.includes(nombreUsuario)) {
+                    // Agregamos clase especial al contenedor principal
+                    div.classList.add("user-online");
+                    
                     puntito.classList.add("is-online");
                     div.querySelector(".estado-texto").innerText = "En línea";
                     div.querySelector(".estado-texto").style.color = "#25d366";
                 } else {
+                    div.classList.remove("user-online");
+                    
                     puntito.classList.remove("is-online");
                     div.querySelector(".estado-texto").innerText = "Desconectado";
                     div.querySelector(".estado-texto").style.color = "#aaa";
@@ -296,10 +324,8 @@
         function cambiarChat(nuevoDestinatario, avatarUrl) {
             chatActual = nuevoDestinatario;
             limpiarBadge(chatActual);
-
             document.getElementById("titulo-chat").innerText = chatActual;
             const headerAvatar = document.getElementById("header-avatar");
-            
             if (chatActual === "Chat General") {
                 headerAvatar.innerHTML = `<i class="fas fa-users"></i>`;
             } else {
@@ -374,6 +400,7 @@
             if (e.key === "Enter") sendMessage();
         });
 
+        // --- COMPRESIÓN DE IMÁGENES ---
         document.getElementById('image-input').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
