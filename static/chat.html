@@ -11,7 +11,6 @@
         body { margin: 0; font-family: 'Segoe UI', sans-serif; background-color: #fff; position: fixed; width: 100%; height: 100dvh; overflow: hidden; }
         .app-container { display: flex; width: 100%; height: 100%; background: #fff; }
         
-        /* --- SIDEBAR --- */
         .sidebar { width: 350px; min-width: 300px; border-right: 1px solid #eee; display: flex; flex-direction: column; background-color: #fff; z-index: 20; }
         .sidebar-header { padding: 15px; background: #fff; border-bottom: 3px solid #ffd700; display: flex; justify-content: space-between; align-items: center; height: 60px; flex-shrink: 0; }
         
@@ -25,7 +24,6 @@
         
         .contact-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; -webkit-overflow-scrolling: touch; }
         
-        /* --- CONTACTO (Estructura Fija) --- */
         .contact { display: flex; align-items: center; padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #f0f0f0; height: 75px; }
         .contact:hover { background-color: #f5f5f5; } 
         .contact.active-chat { background-color: #ffe082; } 
@@ -35,43 +33,20 @@
         .user-avatar i { font-size: 24px; color: #555; }
         .active-avatar { border-color: #ffd700; }
 
-        /* Estructura Interna del Contacto (Grid Flex) */
         .contact-info { flex: 1; display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
-        
-        /* Fila Superior: Nombre + Puntito ---espacio--- Contador */
         .contact-row-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
         .name-wrapper { display: flex; align-items: center; font-weight: 600; font-size: 16px; color: #000; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-        
-        /* Fila Inferior: Mensaje o Estado */
         .contact-row-bottom { display: flex; align-items: center; font-size: 13px; color: #666; height: 18px; overflow: hidden; }
         .status-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
 
-        /* ELEMENTOS VISUALES */
-        .status-dot { 
-            height: 10px; width: 10px; 
-            background-color: #ccc; /* Gris por defecto */
-            border-radius: 50%; 
-            display: inline-block; 
-            margin-left: 8px; /* Separado del nombre */
-            flex-shrink: 0;
-            transition: background-color 0.3s; 
-        }
+        .status-dot { height: 10px; width: 10px; background-color: #ccc; border-radius: 50%; display: inline-block; margin-left: 8px; flex-shrink: 0; transition: background-color 0.3s; }
         .is-online { background-color: #25d366; box-shadow: 0 0 4px #25d366; }
-
-        .unread-badge { 
-            background-color: #ff3b30; color: white; 
-            font-size: 11px; font-weight: bold; 
-            padding: 2px 7px; border-radius: 12px; 
-            display: none; /* Oculto si es 0 */
-            margin-left: 10px; 
-            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
-        }
+        .unread-badge { background-color: #ff3b30; color: white; font-size: 11px; font-weight: bold; padding: 2px 7px; border-radius: 12px; display: none; margin-left: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
 
         .change-avatar-btn { position: absolute; bottom: -2px; right: -2px; background: #000; color: #ffd700; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 20; border: 1px solid white; }
         .logout-btn { color: #ff4444; cursor: pointer; font-size: 18px; margin-left: 10px; padding: 5px; }
         .add-group-btn { background: #ffd700; border: none; width: 35px; height: 35px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
-        /* --- CHAT AREA --- */
         .chat-area { flex: 1; display: flex; flex-direction: column; background: #e5e5e5; background-image: radial-gradient(#ccc 1px, transparent 1px); background-size: 20px 20px; position: relative; overflow: hidden; }
         .chat-header { padding: 0 15px; height: 60px; background: #fff; border-bottom: 1px solid #ddd; display: flex; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); z-index: 10; flex-shrink: 0; cursor: pointer; }
         .back-btn { display: none; margin-right: 15px; font-size: 20px; color: #555; cursor: pointer; }
@@ -93,7 +68,6 @@
         .circle-btn { background: #ffd700; color: #000; border: none; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .clip-btn { background: #f0f0f0; color: #555; margin-right: 5px;}
 
-        /* MODALES */
         .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
         .modal-content { background-color: #fff; padding: 20px; border-radius: 10px; width: 90%; max-width: 400px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); max-height: 80vh; overflow-y: auto; }
         .modal h3 { margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px; }
@@ -106,7 +80,6 @@
         .btn-cancel { background: #ddd; }
         .btn-create { background: #ffd700; color: black; font-weight: bold; }
 
-        /* --- DISEÑO MÓVIL APP --- */
         @media (max-width: 768px) {
             .sidebar { width: 100%; display: flex; }
             .chat-area { display: none; width: 100%; }
@@ -136,7 +109,6 @@
                         </div>
                     </div>
                 </div>
-                
                 <i class="fas fa-sign-out-alt logout-btn" onclick="cerrarSesion()" title="Cerrar Sesión"></i>
             </div>
             
@@ -215,7 +187,21 @@
             }
         }
 
-        // --- NAVEGACIÓN MÓVIL ---
+        // --- FUNCIÓN CLAVE PARA LA HORA ---
+        function formatearHoraLocal(fechaISO) {
+            if (!fechaISO) return "";
+            try {
+                const fecha = new Date(fechaISO);
+                // Si la fecha es inválida, salta al catch
+                if (isNaN(fecha.getTime())) return fechaISO;
+                
+                // Formato limpio: "10:30 PM"
+                return fecha.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            } catch (e) {
+                return fechaISO;
+            }
+        }
+
         function irAChat() { document.body.classList.add("chat-active"); }
         function volverALista() {
             document.body.classList.remove("chat-active");
@@ -340,12 +326,12 @@
         function solicitarBorrado(id) { if(confirm("¿Borrar?")) socket.send(JSON.stringify({action:"delete", id:id})); }
 
         function actualizarEstadoUsuarios(listaOnline) {
-            const divs = document.querySelectorAll(".contact-user");
+            const divs = document.querySelectorAll(".contact");
             divs.forEach(div => {
                 if(div.classList.contains('is-group')) return;
                 const nombre = div.getAttribute("data-name");
                 const puntito = div.querySelector(".status-dot");
-                const textoEstado = div.querySelector(".status-text"); // NUEVO SELECTOR
+                const textoEstado = div.querySelector(".status-text");
                 
                 if (listaOnline.includes(nombre)) {
                     puntito.classList.add("is-online");
@@ -357,7 +343,6 @@
                 } else {
                     puntito.classList.remove("is-online");
                     if (textoEstado) {
-                        // Restauramos el texto original (about) que estaba en data-about
                         const originalAbout = div.getAttribute("data-about") || "Desconectado";
                         textoEstado.innerText = originalAbout;
                         textoEstado.style.color = "#666";
@@ -378,6 +363,7 @@
             if(chatActual==="Chat General") { head.innerHTML=`<i class="fas fa-users"></i>`; }
             else if(esGrupo) { head.innerHTML=`<i class="fas fa-user-friends"></i>`; head.style.backgroundColor="#e1bee7"; }
             else { head.innerHTML=`<img src="${avatar}" alt="${chatActual}">`; head.style.backgroundColor="#eee"; }
+            
             document.getElementById("chat-box").innerHTML="";
             todosLosMensajes.forEach(msg=>renderizarMensaje(msg));
             document.querySelectorAll('.contact').forEach(el=>el.classList.remove('active-chat'));
@@ -407,7 +393,10 @@
                     let inner = "";
                     if(data.sender === username) inner += `<div class="delete-btn" onclick="solicitarBorrado(${data.id})"><i class="fas fa-trash"></i></div>`;
                     if ((chatActual === "Chat General" || esGrupoActual) && data.sender !== username) inner += `<span class="msg-sender-name">${data.sender}</span>`;
-                    inner += content + `<span class="msg-time">${data.timestamp||""}</span>`;
+                    
+                    // --- USAMOS LA FUNCIÓN DE HORA ---
+                    const horaBonita = formatearHoraLocal(data.timestamp);
+                    inner += content + `<span class="msg-time">${horaBonita}</span>`;
                     msgDiv.innerHTML = inner;
                 }
                 chatBox.appendChild(msgDiv);
@@ -436,6 +425,7 @@
             }; r.readAsDataURL(f); e.target.value='';
         });
 
+        // --- FILTRO Y MODALES ---
         function filtrarContactos() {
             const fil=document.getElementById('input-busqueda').value.toUpperCase();
             const list=document.getElementById("lista-contactos").children;
@@ -467,7 +457,8 @@
             const resG=await fetch(`/mis-grupos/${username}`); const misGrupos=await resG.json();
             
             const cont=document.getElementById("lista-contactos");
-            cont.innerHTML=`<div class="contact active-chat" id="contact-general" data-name="Chat General" onclick="cambiarChat('Chat General','',false)">
+            cont.innerHTML=`
+            <div class="contact active-chat" id="contact-general" data-name="Chat General" onclick="cambiarChat('Chat General','',false)">
                 <div class="user-avatar active-avatar"><i class="fas fa-users" style="color:#555;"></i></div>
                 <div class="contact-info">
                     <div class="contact-row-top">
@@ -487,7 +478,8 @@
             }
 
             misGrupos.forEach(g=>{
-                cont.innerHTML+=`<div class="contact is-group" data-name="${g.nombre}" onclick="cambiarChat('${g.nombre}','',true)">
+                cont.innerHTML+=`
+                <div class="contact is-group" data-name="${g.nombre}" onclick="cambiarChat('${g.nombre}','',true)">
                     <div class="user-avatar" style="background-color:#e1bee7;"><i class="fas fa-user-friends" style="color:#6a1b9a;"></i></div>
                     <div class="contact-info">
                         <div class="contact-row-top"><div class="name-wrapper">${g.nombre}</div><span class="unread-badge"></span></div>
@@ -500,7 +492,8 @@
                 if(u.username!==username) {
                     const av=u.avatar?u.avatar:generarUrlAvatar(u.username);
                     const st=u.about?u.about:"Desconectado";
-                    cont.innerHTML+=`<div class="contact contact-user" data-name="${u.username}" data-about="${st}" onclick="cambiarChat('${u.username}','${av}',false)">
+                    cont.innerHTML+=`
+                    <div class="contact contact-user" data-name="${u.username}" data-about="${st}" onclick="cambiarChat('${u.username}','${av}',false)">
                         <div class="user-avatar"><img src="${av}" alt="${u.username}"></div>
                         <div class="contact-info">
                             <div class="contact-row-top">
