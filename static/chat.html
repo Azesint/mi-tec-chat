@@ -59,7 +59,6 @@
 
         .change-avatar-btn { position: absolute; bottom: -2px; right: -2px; background: #000; color: #ffd700; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 20; border: 1px solid white; }
         
-        /* BOTONES HEADER */
         .header-icons { display: flex; gap: 15px; align-items: center; }
         .icon-btn { cursor: pointer; font-size: 18px; color: #555; transition: transform 0.2s, color 0.3s; }
         .icon-btn:hover { transform: scale(1.1); color: #000; }
@@ -103,44 +102,36 @@
         .btn-cancel { background: #ddd; color: #000; }
         .btn-create { background: #ffd700; color: black; font-weight: bold; }
 
-        /* === MODO OSCURO (ESTILOS) === */
+        /* === MODO OSCURO === */
         body.dark-mode { background-color: #121212; color: #e0e0e0; }
         body.dark-mode .app-container { background: #121212; }
-        
         body.dark-mode .sidebar { background-color: #1e1e1e; border-right: 1px solid #333; }
         body.dark-mode .sidebar-header { background: #1e1e1e; border-bottom: 2px solid #ffd700; }
         body.dark-mode .my-name { color: #fff; }
         body.dark-mode .my-about { color: #aaa; }
         body.dark-mode .icon-btn { color: #aaa; }
         body.dark-mode .icon-btn:hover { color: #fff; }
-        
         body.dark-mode .search-box { border-bottom: 1px solid #333; }
         body.dark-mode .search-input { background: #2c2c2c; border: 1px solid #444; color: #fff; }
-        
         body.dark-mode .contact { border-bottom: 1px solid #333; }
         body.dark-mode .contact:hover { background-color: #2a2a2a; }
         body.dark-mode .contact.active-chat { background-color: #332b00; } 
         body.dark-mode .contact-name { color: #eee; }
         body.dark-mode .contact-last-msg, body.dark-mode .status-text { color: #888; }
-        
         body.dark-mode .chat-area { background: #0d0d0d; background-image: radial-gradient(#333 1px, transparent 1px); }
         body.dark-mode .chat-header { background: #1e1e1e; border-bottom: 1px solid #333; }
         body.dark-mode .back-btn { color: #eee; }
-        
         body.dark-mode .message.received { background: #2c2c2c; color: #eee; }
         body.dark-mode .message.sent { background: #ffd700; color: #000; } 
         body.dark-mode .system-msg { background: #333; color: #aaa; }
         body.dark-mode .msg-sender-name { color: #bbb; }
-        
         body.dark-mode .chat-input-area { background: #1e1e1e; border-top: 1px solid #333; }
         body.dark-mode .chat-input-area input[type="text"] { background: #2c2c2c; border: 1px solid #444; color: #fff; }
         body.dark-mode .clip-btn { background: #333; color: #ccc; }
-        
         body.dark-mode .modal-content { background: #1e1e1e; color: #eee; }
         body.dark-mode .modal h3 { border-bottom: 1px solid #333; }
         body.dark-mode .member-item { border-bottom: 1px solid #333; }
         body.dark-mode .btn-cancel { background: #333; color: #eee; }
-        
         body.dark-mode .status-dot { border-color: #1e1e1e; }
 
         /* --- DISEÑO MÓVIL --- */
@@ -152,7 +143,7 @@
             .back-btn { display: block; }
             .message.sent .delete-btn { display: flex; opacity: 0.8; }
             
-            /* Ocultar elementos en móvil para limpiar */
+            /* OCULTAR ELEMENTOS INNECESARIOS EN MÓVIL PARA LIMPIEZA */
             .my-profile-info, .sidebar-header span { display: none; }
             .sidebar-header { justify-content: space-between; }
             .logout-btn { margin-left: 0; }
@@ -160,6 +151,8 @@
     </style>
 </head>
 <body>
+
+    <audio id="notification-sound" src="https://assets.mixkit.co/active_storage/sfx/2346/2346-preview.mp3" preload="auto"></audio>
 
     <div class="app-container">
         <div class="sidebar">
@@ -383,6 +376,15 @@
                 todosLosMensajes.push(data);
                 renderizarMensaje(data);
                 manejarNotificacion(data);
+                
+                // SONIDO
+                if (data.sender !== username && data.sender !== "Sistema") {
+                    try {
+                        const audio = document.getElementById("notification-sound");
+                        audio.currentTime = 0; 
+                        audio.play().catch(e => console.log("Sonido bloqueado"));
+                    } catch (e) {}
+                }
             }
         };
 
@@ -428,7 +430,6 @@
                 if(div.classList.contains('is-group')) return;
                 const nombre = div.getAttribute("data-name");
                 const puntito = div.querySelector(".status-dot");
-                
                 if (listaOnline.includes(nombre)) {
                     if(puntito) puntito.classList.add("is-online");
                 } else {
@@ -478,7 +479,8 @@
                     if ((chatActual === "Chat General" || esGrupoActual) && data.sender !== username) inner += `<span class="msg-sender-name">${data.sender}</span>`;
                     
                     const horaBonita = formatearHoraLocal(data.timestamp);
-                    inner += content + `<span class="msg-time">${horaBonita}</span>`;
+                    // CHECK DE ENVIADO
+                    inner += content + `<span class="msg-time">${horaBonita} <i class="fas fa-check" style="margin-left:3px;"></i></span>`;
                     msgDiv.innerHTML = inner;
                 }
                 chatBox.appendChild(msgDiv);
@@ -507,7 +509,7 @@
             }; r.readAsDataURL(f); e.target.value='';
         });
 
-        // --- FUNCIONES FILTRO Y MODALES (Iguales) ---
+        // --- FILTRO Y MODALES ---
         function filtrarContactos() {
             const fil=document.getElementById('input-busqueda').value.toUpperCase();
             const list=document.getElementById("lista-contactos").children;
@@ -530,7 +532,6 @@
             cerrarModal('modal-grupo');
         }
 
-        // --- SOLO RECARGA SIDEBAR ---
         async function recargarSidebar() {
             const resU=await fetch("/lista-usuarios/"); todosLosUsuarios=await resU.json();
             const resG=await fetch(`/mis-grupos/${username}`); const misGrupos=await resG.json();
@@ -564,7 +565,6 @@
 
         async function inicializar() {
             await recargarSidebar();
-            
             const resH=await fetch("/historial"); const hist=await resH.json();
             todosLosMensajes=hist; 
             
