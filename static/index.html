@@ -20,7 +20,7 @@
             border-radius: 10px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             width: 100%;
-            max-width: 400px;
+            max-width: 350px;
             text-align: center;
         }
         h1 { color: #00a884; margin-bottom: 20px; }
@@ -45,6 +45,7 @@
             transition: background 0.3s;
         }
         button:hover { background-color: #008f6f; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; } /* Estilo deshabilitado */
         
         .footer { margin-top: 20px; font-size: 14px; color: #666; }
         .toggle-link { color: #00a884; cursor: pointer; font-weight: bold; text-decoration: none;}
@@ -59,7 +60,22 @@
             padding: 10px;
             border-radius: 5px;
         }
+
+        /* --- CAJA DE REQUISITOS DE CONTRASEÑA --- */
+        #password-requirements {
+            text-align: left;
+            font-size: 12px;
+            background-color: #f9f9f9;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            display: none; /* Oculto por defecto */
+        }
+        .req-item { margin: 2px 0; color: #666; }
+        .req-item.valid { color: #25d366; font-weight: bold; } /* Verde WhatsApp */
+        .req-item i { margin-right: 5px; width: 10px;}
     </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
 
@@ -68,9 +84,17 @@
         
         <div id="error-msg"></div>
 
-        <input type="text" id="username" placeholder="Nombre de usuario">
-        <input type="password" id="password" placeholder="Contraseña">
+        <input type="text" id="username" placeholder="Nombre de usuario" autocomplete="off">
         
+        <input type="password" id="password" placeholder="Contraseña" onkeyup="verificarPassword()">
+        
+        <div id="password-requirements">
+            <div class="req-item" id="req-len"><i class="fas fa-circle"></i> Mínimo 8 caracteres</div>
+            <div class="req-item" id="req-upper"><i class="fas fa-circle"></i> Una Mayúscula (A-Z)</div>
+            <div class="req-item" id="req-lower"><i class="fas fa-circle"></i> Una Minúscula (a-z)</div>
+            <div class="req-item" id="req-num"><i class="fas fa-circle"></i> Un Número (0-9)</div>
+        </div>
+
         <button id="btn-accion" onclick="procesarAuth()">ENTRAR</button>
 
         <p class="footer">
@@ -80,38 +104,87 @@
     </div>
 
    <script>
-        // Variable para saber si estamos en modo Login o Registro
         let esModoLogin = true; 
 
         function alternarModo() {
-            esModoLogin = !esModoLogin; // Invertir valor
+            esModoLogin = !esModoLogin;
             const titulo = document.getElementById("titulo");
             const btn = document.getElementById("btn-accion");
             const txtFooter = document.getElementById("texto-footer");
             const linkFooter = document.getElementById("link-footer");
             const errorDiv = document.getElementById("error-msg");
+            const reqBox = document.getElementById("password-requirements");
 
-            // Limpiar errores al cambiar
             errorDiv.style.display = "none";
             document.getElementById("username").value = "";
             document.getElementById("password").value = "";
 
             if (esModoLogin) {
-                // Configurar visualmente para LOGIN
+                // MODO LOGIN
                 titulo.innerText = "Iniciar Sesión 🔒";
-                titulo.style.color = "#00a884"; // Verde
+                titulo.style.color = "#00a884";
                 btn.innerText = "ENTRAR";
                 btn.style.backgroundColor = "#00a884";
                 txtFooter.innerText = "¿No tienes cuenta?";
                 linkFooter.innerText = "Regístrate aquí";
+                
+                // Ocultar requisitos y habilitar botón
+                reqBox.style.display = "none";
+                btn.disabled = false;
             } else {
-                // Configurar visualmente para REGISTRO
+                // MODO REGISTRO
                 titulo.innerText = "Crear Cuenta ✨";
-                titulo.style.color = "#007bff"; // Azul para diferenciar
+                titulo.style.color = "#007bff";
                 btn.innerText = "REGISTRARSE";
                 btn.style.backgroundColor = "#007bff"; 
                 txtFooter.innerText = "¿Ya tienes cuenta?";
                 linkFooter.innerText = "Inicia sesión";
+                
+                // Mostrar requisitos y deshabilitar botón hasta que cumpla
+                reqBox.style.display = "block";
+                btn.disabled = true;
+                verificarPassword(); // Checar estado inicial
+            }
+        }
+
+        // --- VALIDACIÓN EN TIEMPO REAL ---
+        function verificarPassword() {
+            if (esModoLogin) return; // En login no validamos
+
+            const pass = document.getElementById("password").value;
+            const btn = document.getElementById("btn-accion");
+
+            // Reglas
+            const hasLen = pass.length >= 8;
+            const hasUpper = /[A-Z]/.test(pass);
+            const hasLower = /[a-z]/.test(pass);
+            const hasNum = /\d/.test(pass);
+
+            // Actualizar UI (Colores)
+            actualizarReq("req-len", hasLen);
+            actualizarReq("req-upper", hasUpper);
+            actualizarReq("req-lower", hasLower);
+            actualizarReq("req-num", hasNum);
+
+            // Habilitar botón solo si TODO es válido
+            if (hasLen && hasUpper && hasLower && hasNum) {
+                btn.disabled = false;
+                btn.style.opacity = "1";
+            } else {
+                btn.disabled = true;
+                btn.style.opacity = "0.6";
+            }
+        }
+
+        function actualizarReq(id, valido) {
+            const el = document.getElementById(id);
+            const icon = el.querySelector("i");
+            if (valido) {
+                el.classList.add("valid");
+                icon.className = "fas fa-check-circle"; // Check verde
+            } else {
+                el.classList.remove("valid");
+                icon.className = "fas fa-circle"; // Bolita gris
             }
         }
 
@@ -124,7 +197,6 @@
                 return;
             }
 
-            // DECIDIR A QUÉ RUTA LLAMAR (/login o /signup)
             const ruta = esModoLogin ? "/login" : "/signup";
 
             try {
@@ -138,16 +210,10 @@
 
                 if (respuesta.ok) {
                     if (!esModoLogin) {
-                        alert("¡Cuenta creada! Ahora entrarás al chat.");
+                        alert("¡Cuenta creada con seguridad máxima! 🛡️");
                     }
-                    
-                    // --- AQUÍ ESTÁ EL CAMBIO DE SEGURIDAD ---
-                    // Guardamos en memoria oculta en lugar de en la URL
                     localStorage.setItem("tecchat_usuario", user);
-                    
-                    // Redirigimos sin mostrar el nombre en el link
                     window.location.href = "/static/chat.html";
-
                 } else {
                     mostrarError(datos.detail || "Error desconocido");
                 }
@@ -163,9 +229,8 @@
             errorDiv.style.display = "block";
         }
 
-        // Enter para enviar
         document.getElementById("password").addEventListener("keypress", function(e) {
-            if (e.key === "Enter") procesarAuth();
+            if (e.key === "Enter" && !document.getElementById("btn-accion").disabled) procesarAuth();
         });
     </script>
 </body>
