@@ -19,7 +19,7 @@ def init_db():
     # Mensajes
     c.execute('''CREATE TABLE IF NOT EXISTS mensajes
                  (id INTEGER PRIMARY KEY AUTOINCREMENT, sender TEXT, recipient TEXT, message TEXT, timestamp TEXT, is_group INTEGER)''')
-    # Usuarios (NUEVO: columna 'about')
+    # Usuarios
     c.execute('''CREATE TABLE IF NOT EXISTS usuarios
                  (username TEXT PRIMARY KEY, password_hash TEXT, avatar TEXT, about TEXT)''')
     # Grupos
@@ -64,7 +64,6 @@ def obtener_mensajes_db():
 def obtener_usuarios_db():
     conn = sqlite3.connect('chat.db', timeout=30, check_same_thread=False)
     c = conn.cursor()
-    # Recuperamos avatar y about
     c.execute("SELECT username, avatar, about FROM usuarios")
     users = c.fetchall()
     conn.close()
@@ -210,7 +209,6 @@ async def signup(user: UserAuth):
     if c.fetchone():
         conn.close()
         raise HTTPException(status_code=400, detail="Usuario existente.")
-    # Default about: "Disponible"
     c.execute("INSERT INTO usuarios VALUES (?, ?, ?, ?)", (user.username, encriptar(user.password), None, "Disponible"))
     conn.commit()
     conn.close()
@@ -226,7 +224,6 @@ async def update_about(data: UserUpdate):
     actualizar_about_db(data.username, data.about)
     return {"message": "Estado actualizado"}
 
-# -- GRUPOS --
 @app.post("/crear-grupo")
 async def create_group(grupo: NewGroup):
     members = list(set(grupo.miembros))
@@ -248,31 +245,20 @@ async def get_group_info(nombre: str):
 async def add_member(action: GroupAction):
     info = obtener_info_grupo_db(action.nombre_grupo)
     if not info: raise HTTPException(404, "Grupo no existe")
-    
-    # Solo creador o miembros pueden agregar (aqui dejamos que creador mande)
-    # Para simplificar, cualquiera del grupo puede agregar, pero solo creador puede echar
-    if action.solicitante not in info["miembros"]:
-        raise HTTPException(403, "No eres del grupo")
-        
+    if action.solicitante not in info["miembros"]: raise HTTPException(403, "No eres del grupo")
     if action.target_user not in info["miembros"]:
         info["miembros"].append(action.target_user)
         modificar_miembros_grupo_db(action.nombre_grupo, info["miembros"])
-        
     return {"message": "Agregado"}
 
 @app.post("/grupo/expulsar")
 async def kick_member(action: GroupAction):
     info = obtener_info_grupo_db(action.nombre_grupo)
     if not info: raise HTTPException(404, "Grupo no existe")
-    
-    # SOLO EL CREADOR PUEDE EXPULSAR
-    if info["creador"] != action.solicitante:
-        raise HTTPException(403, "Solo el creador puede expulsar")
-        
+    if info["creador"] != action.solicitante: raise HTTPException(403, "Solo el creador puede expulsar")
     if action.target_user in info["miembros"]:
         info["miembros"].remove(action.target_user)
         modificar_miembros_grupo_db(action.nombre_grupo, info["miembros"])
-        
     return {"message": "Expulsado"}
 
 @app.get("/lista-usuarios/")
@@ -287,7 +273,9 @@ async def get_history():
 async def websocket_endpoint(websocket: WebSocket, client_id: str):
     await manager.connect(websocket, client_id)
     try:
-        now = datetime.now().strftime("%I:%M %p")
+        # --- AQUÍ ESTÁ EL CAMBIO CLAVE: HORA UTC (Z) ---
+        now = datetime.utcnow().isoformat() + "Z"
+        
         sys_msg = json.dumps({"type": "CHAT", "sender": "Sistema", "recipient": "Todos", "message": f"{client_id} se ha unido", "timestamp": now, "is_group": False})
         await manager.broadcast(sys_msg)
         
@@ -305,7 +293,9 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 recipient = data_json["recipient"]
                 message = data_json["message"]
                 is_group = data_json.get("is_group", False)
-                hora_actual = datetime.now().strftime("%I:%M %p") 
+                
+                # --- AQUÍ ESTÁ EL CAMBIO CLAVE: HORA UTC (Z) ---
+                hora_actual = datetime.utcnow().isoformat() + "Z"
                 
                 nuevo_id = guardar_mensaje_db(client_id, recipient, message, hora_actual, is_group)
                 
